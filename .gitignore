@@ -13,6 +13,7 @@ firebase-debug.log*
 **/android/app/google-services.json
 **/ios/Runner/GoogleService-Info.plist
 **/ios/Flutter/ephemeral/
+**/ios/Flutter/AppCheckDebugToken.xcconfig
 **/ios/Pods/
 **/lib/firebase_options.dart
 **/firebase.json

@@ -91,4 +91,52 @@ void main() {
     expect(document.exportRecordsCsv(),
         contains('"1","ready","Ramon Dela Cruz","0231"'));
   });
+
+  test('quality report separates OCR confidence from accuracy claims', () {
+    final document = LegacyDocument(
+      name: 'faded.jpg',
+      documentType: 'scan',
+      pages: [
+        LegacyPage(
+          number: 1,
+          image: Uint8List(0),
+          lines: lines,
+          enhancementApplied: true,
+        ),
+      ],
+      fields: const [],
+    );
+    expect(document.meanOcrConfidence, closeTo(0.845, 0.001));
+    expect(document.lowConfidenceLines, 1);
+    expect(
+        document.qualityReport['claim_boundary'], contains('not an accuracy'));
+    expect(document.exportJson(), contains('enhanced_pages'));
+  });
+
+  test('detected drawing rectangles export as review-required SVG and DXF', () {
+    const object = DrawingObject(
+      id: 'p1rect1',
+      kind: 'rectangle',
+      box: [0.1, 0.2, 0.3, 0.4],
+      confidence: 0.91,
+    );
+    final document = LegacyDocument(
+      name: 'plan.jpg',
+      documentType: 'drawing',
+      pages: [
+        LegacyPage(
+          number: 1,
+          image: Uint8List(0),
+          lines: const [],
+          drawingObjects: const [object],
+        ),
+      ],
+      fields: const [],
+    );
+    expect(document.drawingObjectCount, 1);
+    expect(document.exportSvg(), contains('id="p1rect1"'));
+    expect(document.exportSvg(), contains('Unitless'));
+    expect(document.exportDxf(), contains('LWPOLYLINE'));
+    expect(document.exportJson(), contains('normalized_page'));
+  });
 }

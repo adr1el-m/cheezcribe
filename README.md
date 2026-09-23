@@ -1,10 +1,10 @@
 # LegacyLens • AppCon 2026 Team 08
 
-Status: Team 08's **LegacyLens** entry is in development for **Legacy Knowledge Digitization & Asset Redefinition**. The practice Firebase project exists, but live AI inference, Android/web import and public submission are not yet verified. No winning outcome is guaranteed.
+Status: Team 08's **LegacyLens** entry is in development for **Legacy Knowledge Digitization & Asset Redefinition**. Native OCR has been exercised on iPhone and Android simulators. Live AI inference, real archive accuracy, web import and public submission are not yet verified. No winning outcome is guaranteed.
 
 ## Product and scorecard
 
-The team supplied the LegacyLens concept on September 23. See [the implementation and judging map](docs/LEGACYLENS_PLAN.md) and [the assigned challenge](docs/TEAM_08_CHALLENGE.md). The current P0 code lives in [`app/`](app/README.md). A permitted historical sample has not been supplied; the bundled directory is synthetic and labeled accordingly.
+The team supplied the LegacyLens concept on September 23. See [the implementation and judging map](docs/LEGACYLENS_PLAN.md) and [the assigned challenge](docs/TEAM_08_CHALLENGE.md). The current P0 code lives in [`app/`](app/README.md). The bundled 1915 public-works page is an evaluation fixture; confirm its source and demo permission before public presentation.
 
 The app focuses on a reviewable document-to-asset workflow with a dependable iPhone demo. The official mechanics PDF is the source for event requirements; our recommendations are identified separately.
 
@@ -18,13 +18,18 @@ The app focuses on a reviewable document-to-asset workflow with a dependable iPh
 
 ## LegacyLens app
 
-The current main app is [LegacyLens](app/README.md). To open it on the iPhone 18 Pro simulator:
+The current main app is [LegacyLens](app/README.md).
 
-```sh
-bash scripts/run-ios.sh
-```
+- **iPhone 15 (Physical or Simulator)**: See [iPhone 15 Guide](docs/IPHONE_15_GUIDE.md) or launch the simulator directly:
+  ```sh
+  bash scripts/run-ios-15.sh
+  ```
+- **iPhone 18 Pro simulator**:
+  ```sh
+  bash scripts/run-ios.sh
+  ```
 
-See [iPhone setup and storage record](docs/IOS_STARTER.md) and [live AI setup](docs/LIVE_AI_SETUP.md). The practice Firebase project is registered; AI remains unavailable until the model and App Check are configured and a real request succeeds.
+See [iPhone 15 setup guide](docs/IPHONE_15_GUIDE.md), [iPhone setup and storage record](docs/IOS_STARTER.md), [Android setup](docs/ANDROID_SETUP.md), and [live AI setup](docs/LIVE_AI_SETUP.md). The practice Firebase project is registered for iOS; AI remains unavailable until the model and App Check are configured and a real request succeeds. Android also needs its own Firebase app registration for connected AI.
 
 `preparation/flutter_lab/` contains an Android-focused AI integration exercise, clearly separate from the entry. It sends real requests through Firebase AI Logic when configured. It does not simulate AI responses. An unavailable configuration is displayed honestly.
 
@@ -48,4 +53,4 @@ This preparation workspace has an MIT license. Replace the generic copyright hol
 
 `docs/VALIDATION.md` records what was checked and what still needs a real device, configuration or team input. Public repository publication, portal submission and presentation upload have not been performed.
 
-The earlier starter checks and the current LegacyLens checks are recorded separately. Android SDK/device and live Firebase inference are still needed for a cross-platform, connected AI claim. The new iPhone home screen has been visually checked on the iPhone 18 Pro simulator.
+The earlier starter checks and the current LegacyLens checks are recorded separately. Android physical-device OCR and live Firebase inference are still needed for a connected production claim. The iPhone and Android emulator home screens have been visually checked.

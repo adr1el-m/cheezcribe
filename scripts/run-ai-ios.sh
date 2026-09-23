@@ -7,5 +7,5 @@ if [[ ! -f "$task_root/app/ios/Runner/GoogleService-Info.plist" ]]; then
 fi
 exec "$task_root/scripts/run-ios.sh" \
   --dart-define=FIREBASE_ENABLED=true \
-  --dart-define=AI_MODEL=gemini-3.8-flash \
+  --dart-define=AI_MODEL=gemini-2.5-flash \
   "$@"

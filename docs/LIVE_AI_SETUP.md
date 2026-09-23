@@ -9,8 +9,8 @@ A September 23 simulator smoke run reached Firebase initialization but failed on
 1. In Firebase Console, open **AI services → AI Logic → Get started → Gemini Developer API**. The **Enable APIs** step accepts Google's Gemini API Additional Terms and usage policies and enforces App Check. Leave billing on **Spark** for no-cost use. Do not select Agent Platform Gemini API, which requires billing.
 2. Confirm the registered iOS app's `GoogleService-Info.plist` remains in the Runner target. This app currently initializes from that native config. A teammate cloning the repository must configure their own permitted Firebase project or obtain the team's configuration through a private channel.
 3. In **Security → App Check**, set up the iOS app with the debug provider for the simulator and register the debug token shown in Xcode/Flutter logs. Keep the token private.
-4. From the workspace root, run `bash scripts/run-ai-ios.sh`. It selects the real iPhone 18 Pro simulator and sets `FIREBASE_ENABLED=true` with `gemini-3.8-flash`.
-5. In LegacyLens, enable **Interpret with Gemini**, then tap **Try synthetic sample**. Confirm that document-specific fields appear, including AI suggestions, then review a field and export. A configured status or OCR-only result does not prove live inference.
+4. From the workspace root, run `bash scripts/run-ai-ios.sh`. It selects the real iPhone 18 Pro simulator and sets `FIREBASE_ENABLED=true` with `gemini-2.5-flash`.
+5. In LegacyLens, enable **Cloud Gemini Enrichment**, then tap **Try bundled 1915 sample**. Confirm that the result note explicitly says `Gemini Cloud`, review a field, and export. A configured status or OCR-only result does not prove live inference.
 
 Repeatable check after setup, from `app/` with the installed Xcode selected:
 
@@ -19,7 +19,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   ../.tooling/flutter/bin/flutter test integration_test/live_ai_smoke_test.dart \
   -d 7C0EA28F-61C1-4978-9FAA-9BAF33A18D69 --no-pub \
   --dart-define=FIREBASE_ENABLED=true \
-  --dart-define=AI_MODEL=gemini-3.8-flash
+  --dart-define=AI_MODEL=gemini-2.5-flash
 ```
 
 The test must report a Gemini interpretation with structured fields. Keep simulator/Xcode logs private because App Check may print a debug token.

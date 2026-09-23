@@ -4,9 +4,9 @@ Product concept supplied September 23, 2026. The judging screenshot is an event 
 
 ## Smallest dependable architecture
 
-Flutter app on the already tested iPhone simulator → native Apple document picker and Vision OCR → Firebase AI Logic Gemini multimodal interpretation → local deterministic validation → human review → JSON/CSV export. Keep the source image, OCR lines, model suggestions, and reviewer decisions as separate data. No backend is needed for the first device demo. A web client can reuse the domain model and validation rules once a web OCR service exists.
+Flutter app → native iOS or Android document picker and on-device OCR → Firebase AI Logic Gemini multimodal interpretation when configured → local deterministic validation → human review → JSON/CSV export. Keep the source image, OCR lines, model suggestions, and reviewer decisions as separate data. No backend is needed for the first device demo. A web client can reuse the domain model and validation rules once a web OCR service exists.
 
-The first release targets images and scanned PDF pages on iOS. The native OCR adapter is replaceable for Android or web. The app must say when a platform or file is unsupported. Image processing should preserve the source; a modest contrast preview is useful only if it improves readability in actual test cases.
+The first release targets images and scanned PDF pages on iOS and Android. iOS uses Apple Vision and PDFKit; Android uses ML Kit and `PdfRenderer`. The app must say when a platform or file is unsupported. Image processing should preserve the source; a modest contrast preview is useful only if it improves readability in actual test cases.
 
 ## P0: prove the complete document workflow
 
@@ -25,7 +25,7 @@ The first release targets images and scanned PDF pages on iOS. The native OCR ad
 - Add cross-page validation for repeated names, IDs, and dates.
 - Improve field-to-crop location and support more layout types.
 - Persist original files and reviewer changes across restarts with a suitable store.
-- Build Android or web OCR adapter, then verify that platform on a real device/browser.
+- Verify the Android OCR adapter on a real device and build a web OCR adapter if needed.
 
 ## P2: controlled drawing experiment
 

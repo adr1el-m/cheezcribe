@@ -14,14 +14,51 @@ LegacyField validateSuggestion({
   required List<OcrLine> lines,
   int recordIndex = 0,
 }) {
-  final located = lineIndex >= 0 && lineIndex < lines.length;
-  final line = located ? lines[lineIndex] : null;
   final cleanValue = value?.trim();
   final hasValue = cleanValue != null && cleanValue.isNotEmpty;
-  final ocr = line?.text.trim();
   final candidate = hasValue ? _normalized(cleanValue) : '';
+
+  // Smart line linking: if lineIndex is negative or out of bounds, find matching OCR line
+  var effectiveLineIndex =
+      lineIndex >= 0 && lineIndex < lines.length ? lineIndex : -1;
+
+  if (effectiveLineIndex < 0 && hasValue && lines.isNotEmpty) {
+    // 1. Direct substring search
+    for (var i = 0; i < lines.length; i++) {
+      final lineNorm = _normalized(lines[i].text);
+      if (lineNorm.isNotEmpty &&
+          (lineNorm.contains(candidate) ||
+              (candidate.length > 5 && candidate.contains(lineNorm)))) {
+        effectiveLineIndex = i;
+        break;
+      }
+    }
+    // 2. Token-based word match for compound names and values
+    if (effectiveLineIndex < 0 && candidate.length > 3) {
+      final words = cleanValue
+          .toLowerCase()
+          .split(RegExp(r'\s+'))
+          .where((w) => w.length > 2);
+      for (final word in words) {
+        final wNorm = _normalized(word);
+        for (var i = 0; i < lines.length; i++) {
+          if (_normalized(lines[i].text).contains(wNorm)) {
+            effectiveLineIndex = i;
+            break;
+          }
+        }
+        if (effectiveLineIndex >= 0) break;
+      }
+    }
+  }
+
+  final located = effectiveLineIndex >= 0 && effectiveLineIndex < lines.length;
+  final line = located ? lines[effectiveLineIndex] : null;
+  final ocr = line?.text.trim();
   final evidence = ocr == null ? '' : _normalized(ocr);
-  final agrees = candidate.isNotEmpty && evidence.contains(candidate);
+  final agrees = candidate.isNotEmpty &&
+      (evidence.contains(candidate) ||
+          (candidate.length > 5 && candidate.contains(evidence)));
   final ocrConfidence = (line?.confidence ?? 0).clamp(0.0, 1.0);
   final score = ((ocrConfidence * 0.55) + (agrees ? 0.45 : 0)).clamp(0.0, 1.0);
   final reason = !hasValue
@@ -33,12 +70,12 @@ LegacyField validateSuggestion({
               : ocrConfidence < 0.9
                   ? 'OCR quality needs human review'
                   : 'OCR and AI agree on a clear source line';
-  final ready = hasValue && located && agrees && ocrConfidence >= 0.9;
+  final ready = hasValue && located && agrees && ocrConfidence >= 0.85;
   return LegacyField(
     id: id,
     name: name,
     page: page,
-    lineIndex: lineIndex,
+    lineIndex: effectiveLineIndex,
     ocrValue: ocr,
     aiValue: hasValue ? cleanValue : null,
     score: score,

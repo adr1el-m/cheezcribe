@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:appcon_starter/legacy/legacy_app.dart';
 import 'package:appcon_starter/legacy/legacy_pipeline.dart';
 import 'package:appcon_starter/services/ai_service.dart';
@@ -10,78 +12,70 @@ class OfflineConnection implements AiService {
   @override
   String get status => 'OCR only';
   @override
+  String get activeModel => 'gemini-2.5-flash';
+  @override
+  String get customApiKey => '';
+  @override
   Future<void> connect() async {}
+  @override
+  Future<void> setCustomApiKey(String key) async {}
+  @override
+  Future<void> setActiveModel(String model) async {}
+  @override
+  Future<int> pingConnection() async => 0;
   @override
   Future<AiAnswer> generate(String task, String input) =>
       throw UnimplementedError();
+  @override
+  Future<String?> analyzeDocument({
+    required Uint8List imageBytes,
+    required String ocrText,
+    required int pageNumber,
+  }) async =>
+      null;
 }
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  test('native OCR reads the synthetic directory with source crops', () async {
+  test('native OCR reads the bundled 1915 sample with source crops', () async {
     final result = await LegacyPipeline(OfflineConnection())
         .importAndProcess(sample: true);
     expect(result, isNotNull);
     final lines = result!.document.pages.single.lines;
-    // Synthetic fixture only: visible OCR evidence for an honest demo metric.
+    final page = result.document.pages.single;
+    // One bundled fixture only: visible OCR evidence, not an accuracy metric.
     // ignore: avoid_print
-    print('VISION_OCR_LINES: ${lines.map((line) => line.text).join(' | ')}');
+    print('NATIVE_OCR_LINES: ${lines.map((line) => line.text).join(' | ')}');
     expect(lines.length, greaterThan(5));
-    expect(lines.map((line) => line.text).join(' '), contains('Ramon'));
-    const expectedRecordCells = [
-      '0217',
-      'Ramon Dela Cruz',
-      'Manila',
-      '1978',
-      '0231',
-      'Elena Santos',
-      'Quezon City',
-      '1978',
-      '0246',
-      'Luis Mercado',
-      'Pasig',
-      '1978',
-      '0288',
-      'Maria Reyes',
-      'Makati',
-      '1978',
-    ];
-    var nextLine = 0;
-    var exactCells = 0;
-    for (final expected in expectedRecordCells) {
-      while (nextLine < lines.length && lines[nextLine].text != expected) {
-        nextLine++;
-      }
-      if (nextLine < lines.length) {
-        exactCells++;
-        nextLine++;
-      }
-    }
-    // ignore: avoid_print
-    print(
-        'VISION_SYNTHETIC_EXACT_CELLS: $exactCells/${expectedRecordCells.length}');
-    expect(exactCells, expectedRecordCells.length);
+    final recognized = lines.map((line) => line.text).join(' ').toLowerCase();
+    expect(recognized, contains('tagbilaran'));
+    expect(recognized, contains('860 meters'));
     expect(lines.any((line) => line.crop != null && line.crop!.isNotEmpty),
         isTrue);
-    expect(result.document.fields.length, lines.length);
+    expect(page.enhancedImage, isNotNull);
+    expect(page.enhancedImage, isNotEmpty);
+    // ignore: avoid_print
+    print('NATIVE_DRAWING_OBJECTS: ${page.drawingObjects.length}');
+    expect(result.document.fields, isNotEmpty);
   });
 
-  testWidgets('synthetic directory runs through native OCR and review',
+  testWidgets('bundled sample runs through native OCR and review',
       (tester) async {
     await tester.pumpWidget(LegacyLensApp(connection: OfflineConnection()));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Try synthetic sample'));
+    await tester.tap(find.text('Try bundled 1915 sample'));
     for (var attempt = 0; attempt < 80; attempt++) {
       await tester.pump(const Duration(seconds: 1));
       if (find
-          .textContaining('Synthetic test document')
+          .textContaining('Bundled 1915 evaluation sample')
           .evaluate()
           .isNotEmpty) {
         break;
       }
     }
-    expect(find.textContaining('Synthetic test document'), findsOneWidget);
+    expect(
+        find.textContaining('Bundled 1915 evaluation sample'), findsOneWidget);
     await tester.tap(find.text('Review'));
     await tester.pumpAndSettle();
     expect(find.text('Review queue'), findsOneWidget);

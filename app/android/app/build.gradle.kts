@@ -47,3 +47,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Bundled Latin model keeps on-device OCR available without a model download.
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+}

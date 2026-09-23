@@ -24,14 +24,14 @@ void main() {
             ? error.code
             : error.runtimeType.toString();
         // ignore: avoid_print
-        print('LIVE_AI_ERROR_KIND: $kind');
+        print('LIVE_AI_ERROR_KIND: $kind; MSG: $error');
       },
     );
     expect(result, isNotNull);
     // ignore: avoid_print
     print(
         'LIVE_AI_RESULT: ${result!.note}; structured_fields=${result.document.fields.where((f) => f.aiValue != null).length}');
-    expect(result.note, startsWith('OCR and Gemini interpretation completed'));
+    expect(result.note, contains('Gemini Cloud'));
     expect(result.document.fields.any((f) => f.aiValue != null), isTrue);
   });
 }

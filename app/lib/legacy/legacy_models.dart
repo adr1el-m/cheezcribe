@@ -17,11 +17,52 @@ class OcrLine {
 
 class LegacyPage {
   const LegacyPage(
-      {required this.number, required this.image, required this.lines});
+      {required this.number,
+      required this.image,
+      required this.lines,
+      this.enhancedImage,
+      this.enhancementApplied = false,
+      this.originalMeanConfidence,
+      this.drawingObjects = const []});
   final int number;
+
+  /// The untouched page used for evidence and export provenance.
   final Uint8List image;
+
+  /// A contrast-normalized derivative used only to improve recognition.
+  final Uint8List? enhancedImage;
+  final bool enhancementApplied;
+  final double? originalMeanConfidence;
   final List<OcrLine> lines;
+  final List<DrawingObject> drawingObjects;
   String get ocrText => lines.map((line) => line.text).join('\n');
+}
+
+/// A deliberately narrow CAD primitive detected from a drawing page.
+/// Coordinates are normalized to the page. Geometry remains unitless until a
+/// reviewer supplies a scale; this avoids pretending pixels are engineering
+/// measurements.
+class DrawingObject {
+  const DrawingObject({
+    required this.id,
+    required this.kind,
+    required this.box,
+    required this.confidence,
+  });
+
+  final String id;
+  final String kind;
+  final List<double> box;
+  final double confidence;
+
+  Map<String, Object> toJson() => {
+        'id': id,
+        'kind': kind,
+        'box': box.map((v) => double.parse(v.toStringAsFixed(5))).toList(),
+        'confidence': double.parse(confidence.toStringAsFixed(3)),
+        'units': 'normalized_page',
+        'review_required': true,
+      };
 }
 
 enum FieldStatus { ready, review, accepted, edited, unreadable }
@@ -102,6 +143,38 @@ class LegacyDocument {
   int get readyCandidates =>
       fields.where((f) => f.status == FieldStatus.ready).length;
   bool get hasRecords => fields.any((f) => f.recordIndex > 0);
+  int get totalOcrLines =>
+      pages.fold(0, (total, page) => total + page.lines.length);
+  double get meanOcrConfidence {
+    if (totalOcrLines == 0) return 0;
+    final total = pages.fold<double>(
+        0, (sum, page) => sum + page.lines.fold(0, (s, l) => s + l.confidence));
+    return total / totalOcrLines;
+  }
+
+  int get lowConfidenceLines => pages.fold(
+      0,
+      (total, page) =>
+          total + page.lines.where((line) => line.confidence < 0.80).length);
+  int get drawingObjectCount =>
+      pages.fold(0, (total, page) => total + page.drawingObjects.length);
+  double get sourceLinkedRate => fields.isEmpty
+      ? 0
+      : fields.where((f) => f.lineIndex >= 0).length / fields.length;
+
+  Map<String, Object> get qualityReport => {
+        'ocr_lines': totalOcrLines,
+        'mean_ocr_confidence':
+            double.parse(meanOcrConfidence.toStringAsFixed(3)),
+        'low_confidence_lines': lowConfidenceLines,
+        'source_linked_rate': double.parse(sourceLinkedRate.toStringAsFixed(3)),
+        'fields_requiring_review': needsReview,
+        'reviewed_or_ready_fields': resolved,
+        'enhanced_pages': pages.where((p) => p.enhancementApplied).length,
+        'drawing_objects': drawingObjectCount,
+        'claim_boundary':
+            'Quality indicators route review; they are not an accuracy percentage.',
+      };
 
   void decide(String id, FieldStatus decision, String? value) {
     fields = [
@@ -116,8 +189,60 @@ class LegacyDocument {
         'document_type': documentType,
         'field_count': fields.length,
         'requires_review': needsReview,
+        'quality': qualityReport,
+        'drawings': [
+          for (final page in pages)
+            if (page.drawingObjects.isNotEmpty)
+              {
+                'page': page.number,
+                'objects': page.drawingObjects.map((o) => o.toJson()).toList(),
+              }
+        ],
         'fields': fields.map((field) => field.toJson()).toList(),
       });
+
+  String exportSvg() {
+    final objects = pages.expand((page) => page.drawingObjects).toList();
+    final buffer = StringBuffer()
+      ..writeln('<?xml version="1.0" encoding="UTF-8"?>')
+      ..writeln(
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">')
+      ..writeln(
+          '<!-- Unitless detected rectangles. Review and set scale before engineering use. -->')
+      ..writeln('<g fill="none" stroke="#2563eb" stroke-width="3">');
+    for (final object in objects) {
+      if (object.box.length < 4) continue;
+      final x = object.box[0] * 1000;
+      final y = object.box[1] * 1000;
+      final width = object.box[2] * 1000;
+      final height = object.box[3] * 1000;
+      buffer.writeln(
+          '<rect id="${object.id}" x="${x.toStringAsFixed(2)}" y="${y.toStringAsFixed(2)}" width="${width.toStringAsFixed(2)}" height="${height.toStringAsFixed(2)}" data-confidence="${object.confidence.toStringAsFixed(3)}"/>');
+    }
+    buffer.writeln('</g></svg>');
+    return buffer.toString();
+  }
+
+  String exportDxf() {
+    final buffer = StringBuffer()
+      ..writeln('0\nSECTION\n2\nHEADER\n0\nENDSEC')
+      ..writeln('0\nSECTION\n2\nENTITIES');
+    for (final object in pages.expand((page) => page.drawingObjects)) {
+      if (object.box.length < 4) continue;
+      final x1 = object.box[0] * 1000;
+      final y1 = (1 - object.box[1] - object.box[3]) * 1000;
+      final x2 = x1 + object.box[2] * 1000;
+      final y2 = y1 + object.box[3] * 1000;
+      buffer
+        ..writeln('0\nLWPOLYLINE\n8\nDETECTED_GEOMETRY\n90\n4\n70\n1')
+        ..writeln('10\n${x1.toStringAsFixed(3)}\n20\n${y1.toStringAsFixed(3)}')
+        ..writeln('10\n${x2.toStringAsFixed(3)}\n20\n${y1.toStringAsFixed(3)}')
+        ..writeln('10\n${x2.toStringAsFixed(3)}\n20\n${y2.toStringAsFixed(3)}')
+        ..writeln('10\n${x1.toStringAsFixed(3)}\n20\n${y2.toStringAsFixed(3)}');
+    }
+    buffer.writeln('0\nENDSEC\n0\nEOF');
+    return buffer.toString();
+  }
 
   String exportCsv() {
     const columns = [
@@ -168,5 +293,60 @@ class LegacyDocument {
                 ?.finalValue),
         ].join(','),
     ].join('\r\n');
+  }
+
+  String generateExecutiveAbstract() {
+    final pageCount = pages.length;
+    return 'This $documentType contains $pageCount scanned page${pageCount == 1 ? '' : 's'}. '
+        'LegacyLens preserved the source, extracted $totalOcrLines OCR lines, and prepared '
+        '${fields.length} reviewable structured fields with source references. '
+        '$needsReview unresolved value${needsReview == 1 ? '' : 's'} remain explicitly marked for human review.';
+  }
+
+  Map<String, dynamic> generateSummaryReport() {
+    final abstractText = generateExecutiveAbstract();
+    final totalLines = pages.fold<int>(0, (acc, p) => acc + p.lines.length);
+    final avgConfidence = totalLines == 0
+        ? 0.0
+        : pages.fold<double>(
+                0.0,
+                (acc, p) =>
+                    acc +
+                    p.lines
+                        .fold<double>(0.0, (lAcc, l) => lAcc + l.confidence)) /
+            totalLines;
+
+    final keyEntities = <Map<String, String>>[];
+    for (final field in fields.take(25)) {
+      final val = field.finalValue ?? field.aiValue ?? field.ocrValue;
+      if (val != null && val.trim().isNotEmpty) {
+        keyEntities.add({
+          'record': '${field.recordIndex}',
+          'name': field.name,
+          'value': val.trim(),
+          'status': field.status.name,
+        });
+      }
+    }
+
+    return {
+      'title': name.replaceAll(RegExp(r'\.[^.]+$'), '').replaceAll('_', ' '),
+      'documentType': documentType,
+      'pageCount': pages.length,
+      'filename': name,
+      'abstract': abstractText,
+      'fieldCount': fields.length,
+      'needsReview': needsReview,
+      'resolved': resolved,
+      'qualityScore':
+          '${(avgConfidence * 100).toStringAsFixed(1)}% mean OCR confidence',
+      'keyEntities': keyEntities,
+      'stats': {
+        'totalLines': totalLines,
+        'avgConfidence': avgConfidence,
+        'sourceLinkedRate': sourceLinkedRate,
+        'auditTimestamp': DateTime.now().toIso8601String(),
+      },
+    };
   }
 }

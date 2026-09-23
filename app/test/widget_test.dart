@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:appcon_starter/main.dart';
 import 'package:appcon_starter/core/app_state.dart';
 import 'package:appcon_starter/core/session.dart';
@@ -25,12 +26,30 @@ class DisconnectedAi implements AiService {
   @override
   String get status => 'Firebase project needed';
   @override
+  String get activeModel => 'gemini-3.6-flash';
+  @override
+  String get customApiKey => '';
+  @override
   Future<void> connect() async {}
+  @override
+  Future<void> setCustomApiKey(String key) async {}
+  @override
+  Future<void> setActiveModel(String model) async {}
+  @override
+  Future<int> pingConnection() async => 0;
   @override
   Future<AiAnswer> generate(String task, String input) async {
     calls++;
     throw StateError('not configured');
   }
+
+  @override
+  Future<String?> analyzeDocument({
+    required Uint8List imageBytes,
+    required String ocrText,
+    required int pageNumber,
+  }) async =>
+      null;
 }
 
 class ConnectableAi extends DisconnectedAi {

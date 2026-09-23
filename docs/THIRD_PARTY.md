@@ -13,6 +13,8 @@ The main app's resolved dependencies include shared_preferences 2.5.5 for the ol
 | firebase_ai | Firebase AI Logic client | https://pub.dev/packages/firebase_ai | Record resolved version/license |
 | firebase_app_check | App attestation | https://pub.dev/packages/firebase_app_check | Record resolved version/license |
 | Apple Vision and PDFKit | On-device text recognition and PDF rendering on iOS | Apple platform frameworks | Record minimum supported iOS and platform boundary |
+| ML Kit text recognition 16.0.1 | Bundled on-device Latin OCR for Android | https://developers.google.com/ml-kit/vision/text-recognition/v2/android | Record Android dependency and test on the demo device |
+| Android PdfRenderer | Android PDF page rendering | https://developer.android.com/reference/android/graphics/pdf/PdfRenderer | Record minimum supported Android and device check |
 | Firebase/Gemini services | Proprietary hosted inference | https://firebase.google.com/docs/ai-logic/get-started | Document project access, enabled APIs, model and quota |
 | Authorized archive sources | Not yet supplied | Pending | Record owner permission, origin, version and permitted demo use |
 
