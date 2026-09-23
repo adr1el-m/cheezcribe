@@ -132,7 +132,7 @@ class MainActivity : FlutterActivity() {
             paint.color = Color.rgb(56, 189, 248)
             paint.textSize = 13f
             paint.isFakeBoldText = true
-            canvas.drawText("LEGACYLENS  •  EXECUTIVE ARCHIVAL DOSSIER", 48f, 60f, paint)
+            canvas.drawText("PAPERAZZI  •  EXECUTIVE DOCUMENT DOSSIER", 48f, 60f, paint)
             paint.color = Color.WHITE
             paint.textSize = 9.5f
             paint.isFakeBoldText = false
@@ -308,7 +308,7 @@ class MainActivity : FlutterActivity() {
     private fun process(bytes: ByteArray, name: String, pdf: Boolean): Map<String, Any> {
         val pages = mutableListOf<Map<String, Any>>()
         if (pdf) {
-            val file = File.createTempFile("legacylens-", ".pdf", cacheDir)
+            val file = File.createTempFile("paperazzi-", ".pdf", cacheDir)
             try {
                 file.writeBytes(bytes)
                 ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
@@ -362,15 +362,20 @@ class MainActivity : FlutterActivity() {
                 compareBy<com.google.mlkit.vision.text.Text.Line> {
                     it.boundingBox?.centerY() ?: 0
                 }.thenBy { it.boundingBox?.left ?: 0 }) ?: emptyList()
-            val entries = lines.mapNotNull { line ->
-                val bounds = line.boundingBox ?: return@mapNotNull null
+            var cropBudget = 40
+            val entries = lines.mapIndexedNotNull { index, line ->
+                val bounds = line.boundingBox ?: return@mapIndexedNotNull null
                 val left = max(0, bounds.left - 12)
                 val top = max(0, bounds.top - 12)
                 val right = min(bitmap.width, bounds.right + 12)
                 val bottom = min(bitmap.height, bounds.bottom + 12)
-                if (right <= left || bottom <= top) return@mapNotNull null
-                val crop = Bitmap.createBitmap(bitmap, left, top, right - left, bottom - top)
-                val cropBytes = try { jpeg(crop, 85) } finally { crop.recycle() }
+                if (right <= left || bottom <= top) return@mapIndexedNotNull null
+                val shouldCrop = cropBudget > 0 && (index < 12 || line.confidence < 0.85f)
+                val cropBytes = if (shouldCrop) {
+                    cropBudget--
+                    val crop = Bitmap.createBitmap(bitmap, left, top, right - left, bottom - top)
+                    try { jpeg(crop, 85) } finally { crop.recycle() }
+                } else ByteArray(0)
                 mapOf(
                     "text" to line.text,
                     "confidence" to line.confidence.toDouble(),
@@ -381,7 +386,12 @@ class MainActivity : FlutterActivity() {
                     "crop" to cropBytes
                 )
             }
-            return mapOf("number" to number, "image" to jpeg(bitmap, 88), "lines" to entries)
+            return mapOf(
+                "number" to number,
+                "image" to jpeg(bitmap, 84),
+                "lines" to entries,
+                "drawingObjects" to emptyList<Map<String, Any>>()
+            )
         } finally { recognizer.close() }
     }
 

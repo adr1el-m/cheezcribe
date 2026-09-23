@@ -8,7 +8,7 @@ import 'legacy/legacy_app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(LegacyLensApp(connection: FirebaseAiService()));
+  runApp(PaperazziApp(connection: FirebaseAiService()));
 }
 
 Future<void> runPreparationStarter() async {

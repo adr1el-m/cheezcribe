@@ -13,6 +13,7 @@ LegacyField validateSuggestion({
   required int lineIndex,
   required List<OcrLine> lines,
   int recordIndex = 0,
+  bool fromAi = true,
 }) {
   final cleanValue = value?.trim();
   final hasValue = cleanValue != null && cleanValue.isNotEmpty;
@@ -62,14 +63,20 @@ LegacyField validateSuggestion({
   final ocrConfidence = (line?.confidence ?? 0).clamp(0.0, 1.0);
   final score = ((ocrConfidence * 0.55) + (agrees ? 0.45 : 0)).clamp(0.0, 1.0);
   final reason = !hasValue
-      ? 'Model could not read this value'
+      ? fromAi
+          ? 'Gemini could not read this value'
+          : 'No structured value could be read'
       : !located
           ? 'No source line was linked'
           : !agrees
-              ? 'OCR and AI suggestion disagree'
+              ? fromAi
+                  ? 'OCR and Gemini suggestion disagree'
+                  : 'Structured value and OCR source disagree'
               : ocrConfidence < 0.9
                   ? 'OCR quality needs human review'
-                  : 'OCR and AI agree on a clear source line';
+                  : fromAi
+                      ? 'OCR and Gemini agree on a clear source line'
+                      : 'On-device extraction matches a clear OCR source';
   final ready = hasValue && located && agrees && ocrConfidence >= 0.85;
   return LegacyField(
     id: id,
@@ -77,11 +84,12 @@ LegacyField validateSuggestion({
     page: page,
     lineIndex: effectiveLineIndex,
     ocrValue: ocr,
-    aiValue: hasValue ? cleanValue : null,
+    aiValue: fromAi && hasValue ? cleanValue : null,
     score: score,
     reason: reason,
     status: ready ? FieldStatus.ready : FieldStatus.review,
     recordIndex: recordIndex,
+    suggestedValue: hasValue ? cleanValue : null,
     finalValue: ready ? cleanValue : null,
   );
 }

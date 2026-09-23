@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,12 +9,34 @@ import 'legacy_models.dart';
 import 'legacy_pipeline.dart';
 import 'session_checkpoint_store.dart';
 
-// Restrained archival palette for static painters and status indicators.
-const brandBlue = Color(0xFF315C4B);
-const brandIndigo = Color(0xFF56636D);
-const emeraldGreen = Color(0xFF4F6F5D);
-const amberWarning = Color(0xFF90652D);
-const roseDanger = Color(0xFF92504D);
+// Paperazzi's detection palette. Each color has one consistent meaning across
+// the source preview, understanding summary, review queue, and export views.
+const brandBlue = Color(0xFF0878F9);
+const brandNavy = Color(0xFF092A6A);
+const brandIndigo = Color(0xFF7C3AED);
+const emeraldGreen = Color(0xFF08AA9A);
+const amberWarning = Color(0xFFF59E0B);
+const roseDanger = Color(0xFFE95A67);
+
+class PaperazziMark extends StatelessWidget {
+  const PaperazziMark({super.key, this.size = 42});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(size * .22),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Image.asset(
+            'assets/icons/paperazzi.png',
+            alignment: Alignment.topCenter,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.high,
+          ),
+        ),
+      );
+}
 
 class SolidSvgIcon extends StatelessWidget {
   const SolidSvgIcon(this.name, {super.key, this.size = 20, this.color});
@@ -57,11 +81,11 @@ class LiquidGlassBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = customBgColor ??
-        (isDark ? const Color(0xFF202523) : const Color(0xFFFFFEFA));
+    final bgColor =
+        customBgColor ?? (isDark ? const Color(0xFF0D2245) : Colors.white);
 
     final borderColor = customBorderColor ??
-        (isDark ? const Color(0xFF3A413E) : const Color(0xFFD9D5CC));
+        (isDark ? const Color(0xFF183968) : const Color(0xFFD7E8FC));
 
     return Container(
       margin: margin,
@@ -83,14 +107,14 @@ class LiquidGlassBox extends StatelessWidget {
   }
 }
 
-class LegacyLensApp extends StatefulWidget {
-  const LegacyLensApp({super.key, required this.connection});
+class PaperazziApp extends StatefulWidget {
+  const PaperazziApp({super.key, required this.connection});
   final AiService connection;
   @override
-  State<LegacyLensApp> createState() => _LegacyLensAppState();
+  State<PaperazziApp> createState() => _PaperazziAppState();
 }
 
-class _LegacyLensAppState extends State<LegacyLensApp> {
+class _PaperazziAppState extends State<PaperazziApp> {
   final ThemeMode _themeMode = ThemeMode.light;
 
   bool get isDark =>
@@ -100,29 +124,27 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
               Brightness.dark);
 
   Color get canvasBg =>
-      isDark ? const Color(0xFF191D1B) : const Color(0xFFF5F2EA);
-  Color get cardBg =>
-      isDark ? const Color(0xFF222725) : const Color(0xFFFFFEFA);
-  Color get textPrimary =>
-      isDark ? const Color(0xFFF3F0E8) : const Color(0xFF263238);
+      isDark ? const Color(0xFF07162F) : const Color(0xFFF4F9FF);
+  Color get cardBg => isDark ? const Color(0xFF0D2245) : Colors.white;
+  Color get textPrimary => isDark ? const Color(0xFFF6FAFF) : brandNavy;
   Color get textSecondary =>
-      isDark ? const Color(0xFFB3BAB5) : const Color(0xFF5F6965);
+      isDark ? const Color(0xFFB7C9E8) : const Color(0xFF58749F);
   Color get textMuted =>
-      isDark ? const Color(0xFF8B948F) : const Color(0xFF808985);
+      isDark ? const Color(0xFF7E9BC6) : const Color(0xFF7F98BC);
   Color get borderLight =>
-      isDark ? const Color(0xFF3A413E) : const Color(0xFFD9D5CC);
+      isDark ? const Color(0xFF183968) : const Color(0xFFD7E8FC);
   Color get borderSubtle =>
-      isDark ? const Color(0xFF2B312E) : const Color(0xFFEAE6DD);
+      isDark ? const Color(0xFF14315A) : const Color(0xFFE8F2FD);
   Color get brandBlue =>
-      isDark ? const Color(0xFF88A595) : const Color(0xFF315C4B);
+      isDark ? const Color(0xFF55A8FF) : const Color(0xFF0878F9);
   Color get brandIndigo =>
-      isDark ? const Color(0xFFA5ADB3) : const Color(0xFF56636D);
+      isDark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED);
   Color get emeraldGreen =>
-      isDark ? const Color(0xFF91AA9B) : const Color(0xFF4F6F5D);
+      isDark ? const Color(0xFF4CD9CC) : const Color(0xFF08AA9A);
   Color get amberWarning =>
-      isDark ? const Color(0xFFC5A270) : const Color(0xFF90652D);
+      isDark ? const Color(0xFFFCC86A) : const Color(0xFFF59E0B);
   Color get roseDanger =>
-      isDark ? const Color(0xFFC98B87) : const Color(0xFF92504D);
+      isDark ? const Color(0xFFFF8C96) : const Color(0xFFE95A67);
   late final pipeline = LegacyPipeline(widget.connection);
   final checkpointStore = SessionCheckpointStore();
   LegacyDocument? document;
@@ -136,11 +158,13 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
   String? selectedId;
   bool showBoundingBoxes = true;
   bool showEnhanced = false;
-  bool showDrawingGeometry = true;
+  bool showDrawingGeometry = false;
   String previewFormat = 'json';
+  String detectionFilter = 'All';
   bool reviewOnlyPending = true;
   String searchQuery = '';
   int persistedSessionCount = 0;
+  List<SessionCheckpoint> history = const [];
 
   bool get supportsImport =>
       !kIsWeb &&
@@ -155,12 +179,15 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
   @override
   void initState() {
     super.initState();
-    widget.connection.connect().then((_) {
-      if (mounted) setState(() {});
-    });
     checkpointStore.count().then((value) {
       if (mounted) setState(() => persistedSessionCount = value);
     });
+    _reloadHistory();
+  }
+
+  Future<void> _reloadHistory() async {
+    final entries = await checkpointStore.list();
+    if (mounted) setState(() => history = entries);
   }
 
   Future<void> import({bool sample = false, bool camera = false}) async {
@@ -190,6 +217,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
             ? 'Bundled 1915 evaluation sample. ${result.note}'
             : result.note;
         pageIndex = 0;
+        showEnhanced = result.document.pages.first.enhancementApplied;
         selectedId = result.document.fields
                 .where((f) => f.needsReview)
                 .firstOrNull
@@ -198,6 +226,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
         tab = 0;
       });
       persistedSessionCount = await checkpointStore.save(result.document);
+      await _reloadHistory();
       if (mounted) setState(() {});
       HapticFeedback.mediumImpact();
     } on PlatformException catch (e) {
@@ -376,77 +405,152 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
         }
       }
     });
-    checkpointStore.save(document!).then((value) {
-      if (mounted) setState(() => persistedSessionCount = value);
+    unawaited(_saveCheckpoint(document!));
+  }
+
+  Future<void> _saveCheckpoint(LegacyDocument doc) async {
+    try {
+      final value = await checkpointStore.save(doc);
+      final entries = await checkpointStore.list();
+      if (mounted) {
+        setState(() {
+          persistedSessionCount = value;
+          history = entries;
+        });
+      }
+    } catch (saveError) {
+      debugPrint('Paperazzi checkpoint skipped: $saveError');
+    }
+  }
+
+  Future<void> _openHistory(SessionCheckpoint checkpoint) async {
+    if (!checkpoint.canReopen || busy) return;
+    setState(() {
+      busy = true;
+      error = null;
+      stage = 'Reopening ${checkpoint.source}';
     });
+    try {
+      final result = await pipeline.importAndProcess(
+        savedPath: checkpoint.sourcePath,
+        useAi: false,
+        onStage: (value) {
+          if (mounted) setState(() => stage = value);
+        },
+      );
+      if (!mounted || result == null) return;
+      setState(() {
+        document = result.document;
+        note = result.note;
+        pageIndex = 0;
+        selectedId = result.document.fields.firstOrNull?.id;
+        tab = 0;
+      });
+      await _saveCheckpoint(result.document);
+    } catch (historyError) {
+      if (mounted) setState(() => error = 'Could not reopen this document.');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 
   Future<void> edit(LegacyField field) async {
     HapticFeedback.lightImpact();
     final controller = TextEditingController(
-        text: field.finalValue ?? field.aiValue ?? field.ocrValue ?? '');
-    final value = await showDialog<String>(
+        text: field.finalValue ??
+            field.suggestedValue ??
+            field.aiValue ??
+            field.ocrValue ??
+            '');
+    final value = await showModalBottomSheet<String>(
         context: context,
-        builder: (context) => AlertDialog(
-              backgroundColor: cardBg,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-              title: Row(children: [
-                Icon(Icons.edit_note_rounded, color: brandBlue, size: 28),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('Edit ${field.name}',
-                      style: TextStyle(
-                          color: textPrimary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18)),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20,
+                  MediaQuery.viewInsetsOf(sheetContext).bottom + 20),
+              child: Material(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Icon(Icons.edit_note_rounded,
+                            color: brandBlue, size: 28),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text('Edit ${field.name}',
+                              style: TextStyle(
+                                  color: textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 18)),
+                        ),
+                      ]),
+                      const SizedBox(height: 18),
+                      Text('Enter verified value based on source evidence:',
+                          style: TextStyle(color: textSecondary, fontSize: 13)),
+                      const SizedBox(height: 12),
+                      TextField(
+                          controller: controller,
+                          autofocus: true,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (value) =>
+                              Navigator.pop(context, value.trim()),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, color: textPrimary),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: canvasBg,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: borderLight)),
+                            focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide:
+                                    BorderSide(color: brandBlue, width: 2)),
+                            labelText: 'Verified value',
+                            labelStyle: TextStyle(color: textSecondary),
+                          )),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(sheetContext),
+                              child: Text('Cancel',
+                                  style: TextStyle(color: textSecondary))),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: brandBlue,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () => Navigator.pop(
+                                  sheetContext, controller.text.trim()),
+                              child: const Text('Save Correction')),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ]),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Enter verified value based on source evidence:',
-                      style: TextStyle(color: textSecondary, fontSize: 13)),
-                  const SizedBox(height: 12),
-                  TextField(
-                      controller: controller,
-                      autofocus: true,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, color: textPrimary),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: canvasBg,
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderLight)),
-                        focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: brandBlue, width: 2)),
-                        labelText: 'Verified value',
-                        labelStyle: TextStyle(color: textSecondary),
-                      )),
-                ],
               ),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child:
-                        Text('Cancel', style: TextStyle(color: textSecondary))),
-                FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: brandBlue,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () =>
-                        Navigator.pop(context, controller.text.trim()),
-                    child: const Text('Save Correction')),
-              ],
             ));
     controller.dispose();
     if (value != null && value.isNotEmpty && mounted) {
-      decide(field, FieldStatus.edited, value);
+      decide(field, FieldStatus.edited, value, autoAdvance: false);
+      setState(() {
+        reviewOnlyPending = false;
+        selectedId = field.id;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text('Verified value saved.'),
+      ));
     }
   }
 
@@ -533,7 +637,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: textPrimary)),
-                        Text('Direct Cloud API & Firebase Hybrid Routing',
+                        Text('Optional cloud AI for Android and other devices',
                             style:
                                 TextStyle(fontSize: 12, color: textSecondary)),
                       ],
@@ -660,6 +764,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                           : () async {
                               setModalState(() => testing = true);
                               try {
+                                await widget.connection.connect();
                                 await widget.connection
                                     .setCustomApiKey(keyController.text);
                                 await widget.connection
@@ -693,18 +798,33 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                   Expanded(
                     child: FilledButton(
                       style: FilledButton.styleFrom(backgroundColor: brandBlue),
-                      onPressed: () async {
-                        await widget.connection
-                            .setCustomApiKey(keyController.text);
-                        await widget.connection.setActiveModel(selectedModel);
-                        HapticFeedback.lightImpact();
-                        setState(() {
-                          allowCloudAi = widget.connection.ready;
-                        });
-                        if (sheetContext.mounted) {
-                          Navigator.of(sheetContext).pop();
-                        }
-                      },
+                      onPressed: testing
+                          ? null
+                          : () async {
+                              setModalState(() => testing = true);
+                              try {
+                                await widget.connection.connect();
+                                await widget.connection
+                                    .setCustomApiKey(keyController.text);
+                                await widget.connection
+                                    .setActiveModel(selectedModel);
+                                final latency =
+                                    await widget.connection.pingConnection();
+                                if (!mounted) return;
+                                setState(() => allowCloudAi = true);
+                                HapticFeedback.mediumImpact();
+                                if (sheetContext.mounted) {
+                                  Navigator.of(sheetContext).pop();
+                                }
+                                debugPrint(
+                                    'Gemini connection verified in ${latency}ms');
+                              } catch (e) {
+                                setModalState(() {
+                                  testing = false;
+                                  pingResult = 'Connection failed: $e';
+                                });
+                              }
+                            },
                       child: const Text('Save & Connect'),
                     ),
                   ),
@@ -720,41 +840,40 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'LegacyLens',
+        title: 'Paperazzi',
         debugShowCheckedModeBanner: false,
         themeMode: _themeMode,
         theme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.light,
-          scaffoldBackgroundColor: const Color(0xFFF5F2EA),
+          scaffoldBackgroundColor: const Color(0xFFF4F9FF),
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF315C4B),
-            surface: const Color(0xFFFFFEFA),
+            seedColor: brandBlue,
+            surface: Colors.white,
             brightness: Brightness.light,
           ),
           textTheme: const TextTheme(
-            bodyMedium:
-                TextStyle(color: Color(0xFF263238), letterSpacing: -0.1),
-            titleLarge: TextStyle(
-                color: Color(0xFF263238), fontWeight: FontWeight.w700),
+            bodyMedium: TextStyle(color: brandNavy, letterSpacing: -0.1),
+            titleLarge:
+                TextStyle(color: brandNavy, fontWeight: FontWeight.w700),
           ),
           cardTheme: CardThemeData(
             color: Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
-              side: const BorderSide(color: Color(0xFFD9D5CC), width: 1),
+              side: const BorderSide(color: Color(0xFFD7E8FC), width: 1),
             ),
           ),
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFF5F2EA),
+            backgroundColor: Color(0xFFF4F9FF),
             elevation: 0,
-            foregroundColor: Color(0xFF263238),
+            foregroundColor: brandNavy,
             centerTitle: false,
           ),
           filledButtonTheme: FilledButtonThemeData(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF315C4B),
+              backgroundColor: brandBlue,
               foregroundColor: Colors.white,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -766,8 +885,8 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
           ),
           outlinedButtonTheme: OutlinedButtonThemeData(
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF263238),
-              side: const BorderSide(color: Color(0xFFD9D5CC), width: 1.2),
+              foregroundColor: brandNavy,
+              side: const BorderSide(color: Color(0xFFBFD9FB), width: 1.2),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
@@ -849,22 +968,14 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                       labelType: NavigationRailLabelType.all,
                       leading: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: brandBlue.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: SolidSvgIcon('archive',
-                              color: brandBlue, size: 28),
-                        ),
+                        child: const PaperazziMark(size: 44),
                       ),
                       destinations: [
                         NavigationRailDestination(
                           icon: const SolidSvgIcon('archive'),
                           selectedIcon:
                               SolidSvgIcon('archive', color: brandBlue),
-                          label: const Text('Documents'),
+                          label: const Text('Home'),
                         ),
                         NavigationRailDestination(
                           icon: Badge(
@@ -885,7 +996,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                           icon: const SolidSvgIcon('export'),
                           selectedIcon:
                               SolidSvgIcon('export', color: brandBlue),
-                          label: const Text('Export'),
+                          label: const Text('Library'),
                         ),
                       ],
                     ),
@@ -914,7 +1025,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                     ),
                     child: NavigationBar(
                       backgroundColor: cardBg,
-                      indicatorColor: const Color(0xFFDDE5DF),
+                      indicatorColor: const Color(0xFFDDEEFF),
                       selectedIndex: tab,
                       onDestinationSelected: (v) {
                         HapticFeedback.selectionClick();
@@ -925,7 +1036,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                           icon: SolidSvgIcon('archive', color: textSecondary),
                           selectedIcon:
                               SolidSvgIcon('archive', color: brandBlue),
-                          label: 'Documents',
+                          label: 'Home',
                         ),
                         NavigationDestination(
                           icon: Badge(
@@ -946,7 +1057,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                           icon: SolidSvgIcon('export', color: textSecondary),
                           selectedIcon:
                               SolidSvgIcon('export', color: brandBlue),
-                          label: 'Export',
+                          label: 'Library',
                         ),
                       ],
                     ),
@@ -958,16 +1069,43 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
   Widget _documents({required bool wide}) => ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         children: [
-          Text('Make history usable.',
+          Row(
+            children: [
+              const PaperazziMark(size: 42),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('Paperazzi',
+                    style: TextStyle(
+                        color: textPrimary,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.8)),
+              ),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: brandBlue.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child:
+                    Icon(Icons.shield_outlined, color: textPrimary, size: 21),
+              ),
+            ],
+          ),
+          const SizedBox(height: 26),
+          Text('Turn your paper\ninto lasting knowledge.',
               style: TextStyle(
                   color: textPrimary,
-                  fontSize: 32,
+                  fontSize: 34,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -1.0,
                   height: 1.15)),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           Text(
-              'Turn fragile physical scans into reviewable digital assets with on-device $ocrEngineName OCR and optional Gemini interpretation.',
+              defaultTargetPlatform == TargetPlatform.iOS
+                  ? 'Scan, understand, verify, and export with on-device Apple Vision intelligence.'
+                  : 'Scan, understand, verify, and export with on-device OCR and optional cloud assistance.',
               style:
                   TextStyle(color: textSecondary, fontSize: 14, height: 1.45)),
           const SizedBox(height: 20),
@@ -1031,13 +1169,15 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('$ocrEngineName on-device OCR active',
+                            Text('On-device OCR active',
                                 style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 13,
                                     color: textPrimary)),
                             Text(
-                              'OCR and deterministic structuring stay on-device unless cloud enrichment is enabled',
+                              defaultTargetPlatform == TargetPlatform.iOS
+                                  ? 'Apple Vision OCR and local structuring run on-device with Apple silicon acceleration.'
+                                  : '$ocrEngineName OCR and deterministic structuring stay on-device.',
                               style: TextStyle(
                                   fontSize: 11,
                                   color: textSecondary,
@@ -1086,8 +1226,13 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 2, left: 26),
                       child: Text(
-                          'Optional multi-page cloud model. Keep OFF for instant on-device processing.',
-                          style: TextStyle(fontSize: 11, color: textSecondary)),
+                        allowCloudAi
+                            ? 'Gemini verified and enabled for selected pages.'
+                            : defaultTargetPlatform == TargetPlatform.iOS
+                                ? 'Optional cloud fallback for other platforms; not used in the iPhone demo.'
+                                : widget.connection.status,
+                        style: TextStyle(fontSize: 11, color: textSecondary),
+                      ),
                     ),
                     value: allowCloudAi,
                     onChanged: (value) {
@@ -1280,7 +1425,8 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
             const SizedBox(height: 6),
             Text(
               'Import a scanned document${supportsCameraScan ? ', scan with camera,' : ''} or test with the bundled 1915 public-works sample. '
-              '$ocrEngineName OCR extracts raw text on-device, and Gemini structures records with full audit provenance.',
+              '${defaultTargetPlatform == TargetPlatform.iOS ? 'Apple Vision reads the page on-device, then Paperazzi structures it locally for this iPhone demo.' : '$ocrEngineName OCR extracts raw text on-device; cloud assistance remains optional.'} '
+              'Every extracted value stays linked to its visible source.',
               style:
                   TextStyle(color: textSecondary, height: 1.45, fontSize: 13),
             ),
@@ -1289,8 +1435,12 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _stepPill('01', 'On-Device OCR'),
-                _stepPill('02', 'Gemini Structuring'),
+                _stepPill(
+                    '01',
+                    defaultTargetPlatform == TargetPlatform.iOS
+                        ? 'Apple Vision OCR'
+                        : 'On-Device OCR'),
+                _stepPill('02', 'Local Structuring'),
                 _stepPill('03', 'Human Verification'),
                 _stepPill('04', 'Asset Export'),
               ],
@@ -1470,7 +1620,10 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                                   fontSize: 12, fontWeight: FontWeight.w600)),
                         )
                     ],
-                    onChanged: (v) => setState(() => pageIndex = v ?? 0),
+                    onChanged: (v) => setState(() {
+                      pageIndex = v ?? 0;
+                      showEnhanced = doc.pages[pageIndex].enhancementApplied;
+                    }),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1488,6 +1641,19 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                 },
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _detectionFilterChip('All'),
+                _detectionFilterChip('Text'),
+                _detectionFilterChip('Tables'),
+                _detectionFilterChip('Handwriting'),
+                _detectionFilterChip('Drawings'),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           // Interactive zoomable document viewer with OCR overlay
@@ -1512,7 +1678,10 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                                   ? page.enhancedImage!
                                   : page.image,
                               fit: BoxFit.contain),
-                          if (showBoundingBoxes)
+                          if (showBoundingBoxes &&
+                              (detectionFilter == 'All' ||
+                                  detectionFilter == 'Text' ||
+                                  detectionFilter == 'Handwriting'))
                             Positioned.fill(
                               child: LayoutBuilder(
                                   builder: (context, constraints) {
@@ -1525,6 +1694,8 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                               }),
                             ),
                           if (showDrawingGeometry &&
+                              (detectionFilter == 'All' ||
+                                  detectionFilter == 'Drawings') &&
                               page.drawingObjects.isNotEmpty)
                             Positioned.fill(
                               child: CustomPaint(
@@ -1666,10 +1837,141 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
               ),
             ],
           ]),
+          const SizedBox(height: 22),
+          _aiUnderstanding(doc, page),
         ],
       ),
     );
   }
+
+  Widget _detectionFilterChip(String label) {
+    final selected = detectionFilter == label;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        selected: selected,
+        showCheckmark: false,
+        label: Text(label),
+        labelStyle: TextStyle(
+          color: selected ? Colors.white : textSecondary,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+        selectedColor: brandBlue,
+        backgroundColor: canvasBg,
+        side: BorderSide(color: selected ? brandBlue : borderLight),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        onSelected: (_) {
+          HapticFeedback.selectionClick();
+          setState(() => detectionFilter = label);
+        },
+      ),
+    );
+  }
+
+  Widget _aiUnderstanding(LegacyDocument doc, LegacyPage page) {
+    final recordGroups = doc.fields
+        .where((field) => field.recordIndex > 0)
+        .map((field) => field.recordIndex)
+        .toSet()
+        .length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+            defaultTargetPlatform == TargetPlatform.iOS
+                ? 'On-Device Understanding'
+                : 'Document Understanding',
+            style: TextStyle(
+                color: textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.4)),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: canvasBg,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: borderSubtle),
+          ),
+          child: Column(
+            children: [
+              _understandingRow(
+                  Icons.title_rounded,
+                  'Text',
+                  'Labels, paragraphs, and annotations',
+                  page.lines.length,
+                  brandBlue),
+              _understandingRow(
+                  Icons.table_chart_rounded,
+                  'Tables',
+                  'Structured rows and grouped records',
+                  recordGroups,
+                  emeraldGreen),
+              _understandingRow(Icons.draw_rounded, 'Handwriting',
+                  'Manual notes and signatures', 0, brandIndigo),
+              _understandingRow(
+                  Icons.architecture_rounded,
+                  'Drawing objects',
+                  'Diagrams, plans, and traced geometry',
+                  page.drawingObjects.length,
+                  brandIndigo,
+                  last: true),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _understandingRow(IconData icon, String title, String description,
+          int count, Color color,
+          {bool last = false}) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          border: last ? null : Border(bottom: BorderSide(color: borderSubtle)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(description,
+                      style: TextStyle(color: textSecondary, fontSize: 11)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text('$count detected',
+                  style: TextStyle(
+                      color: color, fontSize: 10, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
 
   int? _selectedLineIndex(LegacyDocument doc) {
     if (selectedId == null) return null;
@@ -1685,7 +1987,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
       if (searchQuery.isEmpty) return true;
       final query = searchQuery.toLowerCase();
       return f.name.toLowerCase().contains(query) ||
-          (f.finalValue ?? f.aiValue ?? f.ocrValue ?? '')
+          (f.finalValue ?? f.suggestedValue ?? f.aiValue ?? f.ocrValue ?? '')
               .toLowerCase()
               .contains(query);
     }).toList();
@@ -1818,6 +2120,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                               const SizedBox(height: 2),
                               Text(
                                 field.finalValue ??
+                                    field.suggestedValue ??
                                     field.aiValue ??
                                     field.ocrValue ??
                                     'Unreadable',
@@ -2130,6 +2433,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                                     )),
                                 Text(
                                   field.finalValue ??
+                                      field.suggestedValue ??
                                       field.aiValue ??
                                       field.ocrValue ??
                                       '—',
@@ -2166,10 +2470,13 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
     // Smart fallback crop resolution: if unlinked or crop empty, search page lines for match
     if ((line == null || line.crop == null || line.crop!.isEmpty) &&
         page != null) {
-      final query =
-          (field.finalValue ?? field.aiValue ?? field.ocrValue ?? field.name)
-              .trim()
-              .toLowerCase();
+      final query = (field.finalValue ??
+              field.suggestedValue ??
+              field.aiValue ??
+              field.ocrValue ??
+              field.name)
+          .trim()
+          .toLowerCase();
       if (query.isNotEmpty) {
         final normQ = query.replaceAll(RegExp(r'[^a-z0-9]'), '');
         for (final candidate in page.lines) {
@@ -2313,14 +2620,9 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                     borderRadius: BorderRadius.circular(6),
                     child: Image.memory(line.crop!, fit: BoxFit.contain),
                   )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.crop_free_rounded, size: 16, color: textMuted),
-                      const SizedBox(width: 8),
-                      Text('Full page context • Focus below to view scan',
-                          style: TextStyle(color: textSecondary, fontSize: 12)),
-                    ],
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.memory(page!.image, fit: BoxFit.contain),
                   ),
           ),
           const SizedBox(height: 12),
@@ -2335,6 +2637,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
               setState(() {
                 pageIndex = (field.page - 1).clamp(0, doc.pages.length - 1);
                 showBoundingBoxes = true;
+                showEnhanced = doc.pages[pageIndex].enhancementApplied;
                 tab = 0;
               });
             },
@@ -2363,8 +2666,12 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                 ),
                 Divider(height: 16, color: borderLight),
                 _comparisonRow(
-                  'AI SUGGESTION',
-                  field.aiValue ?? 'No AI suggestion',
+                  field.aiValue != null
+                      ? 'OPTIONAL CLOUD SUGGESTION'
+                      : 'APPLE ON-DEVICE INTERPRETATION',
+                  field.aiValue ??
+                      field.suggestedValue ??
+                      'No supported interpretation found',
                   Icons.psychology_alt_rounded,
                   brandBlue,
                 ),
@@ -2407,7 +2714,21 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
           ),
           const SizedBox(height: 20),
 
-          // Tactile Action Dock (Accept, Keep OCR, Edit, Mark Unreadable)
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: brandBlue,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async => edit(field),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('Edit verified value'),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Tactile Action Dock (Accept, Keep OCR, Mark Unreadable)
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -2417,9 +2738,10 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                   backgroundColor: emeraldGreen,
                   foregroundColor: Colors.white,
                 ),
-                onPressed: field.aiValue == null
+                onPressed: (field.aiValue ?? field.suggestedValue) == null
                     ? null
-                    : () => decide(field, FieldStatus.accepted, field.aiValue),
+                    : () => decide(field, FieldStatus.accepted,
+                        field.aiValue ?? field.suggestedValue),
                 icon: const Icon(Icons.check_rounded, size: 18),
                 label: const Text('Accept suggestion'),
               ),
@@ -2429,11 +2751,6 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                     : () => decide(field, FieldStatus.accepted, field.ocrValue),
                 icon: const Icon(Icons.text_format_rounded, size: 18),
                 label: const Text('Keep OCR'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => edit(field),
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('Edit value'),
               ),
               TextButton(
                 style: TextButton.styleFrom(
@@ -2491,8 +2808,15 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
   Widget _export() {
     final doc = document;
     if (doc == null) {
-      return _placeholder(
-          'Export asset', 'Import and review a source before exporting.');
+      return ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        children: [
+          _historyPanel(),
+          const SizedBox(height: 18),
+          _notice(Icons.upload_file_rounded,
+              'Import and review a source before exporting.'),
+        ],
+      );
     }
 
     final jsonContent = doc.exportJson();
@@ -2508,6 +2832,8 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       children: [
+        _historyPanel(),
+        const SizedBox(height: 18),
         Text('REUSABLE DIGITAL ASSET',
             style: TextStyle(
                 color: brandBlue,
@@ -2523,7 +2849,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                 letterSpacing: -0.8)),
         const SizedBox(height: 6),
         Text(
-            'Exports include source references, original OCR text, AI suggestions, human verification decisions, and line coordinate mappings.',
+            'Exports include source references, original OCR text, on-device interpretations, optional cloud suggestions, human verification decisions, and line coordinate mappings.',
             style: TextStyle(color: textSecondary, fontSize: 13, height: 1.45)),
         const SizedBox(height: 16),
 
@@ -2542,7 +2868,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
           Icons.save_outlined,
           'Structured checkpoint saved on this device • '
           '$persistedSessionCount of ${SessionCheckpointStore.maxEntries} slots used. '
-          'Source images are not duplicated in checkpoints.',
+          'Imported source files are retained locally for reopening.',
           color: emeraldGreen,
         ),
 
@@ -2790,6 +3116,77 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
     );
   }
 
+  Widget _historyPanel() => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: borderLight),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.history_rounded, color: brandBlue),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Document history',
+                      style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800)),
+                ),
+                Text('${history.length} saved',
+                    style: TextStyle(color: textSecondary, fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (history.isEmpty)
+              Text('Imported documents will appear here for quick reopening.',
+                  style: TextStyle(color: textSecondary, fontSize: 13))
+            else
+              for (final entry in history.take(6))
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: brandBlue.withValues(alpha: .1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.description_outlined,
+                        color: brandBlue, size: 20),
+                  ),
+                  title: Text(entry.source,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700)),
+                  subtitle: Text(
+                      '${entry.pageCount} pages • ${entry.fieldCount} fields • ${entry.needsReview} to review',
+                      style: TextStyle(color: textSecondary, fontSize: 11)),
+                  trailing: entry.canReopen
+                      ? IconButton(
+                          tooltip: 'Reopen document',
+                          onPressed: busy ? null : () => _openHistory(entry),
+                          icon: const Icon(Icons.arrow_forward_rounded),
+                          color: brandBlue,
+                        )
+                      : Tooltip(
+                          message:
+                              'Summary from an older build; import again to enable reopening.',
+                          child: Icon(Icons.history_toggle_off_rounded,
+                              color: textMuted, size: 20),
+                        ),
+                ),
+          ],
+        ),
+      );
+
   Widget _formatPill(String title, String key) {
     final active = previewFormat == key;
     return InkWell(
@@ -2818,7 +3215,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
   Widget _placeholder(String title, String message) => ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          Text('LEGACYLENS',
+          Text('PAPERAZZI',
               style: TextStyle(
                   color: brandBlue,
                   fontWeight: FontWeight.w800,
@@ -2845,7 +3242,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
           FilledButton.icon(
             onPressed: () => setState(() => tab = 0),
             icon: const Icon(Icons.arrow_back_rounded, size: 18),
-            label: const Text('Go to Documents'),
+            label: const Text('Go to Home'),
           ),
         ],
       );
@@ -2858,9 +3255,9 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: effectiveColor.withValues(alpha: 0.08),
+          color: canvasBg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: effectiveColor.withValues(alpha: 0.2)),
+          border: Border.all(color: borderLight),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -2878,7 +3275,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
             Expanded(
               child: Text(text,
                   style: TextStyle(
-                      color: effectiveColor,
+                      color: textSecondary,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                       height: 1.35)),
@@ -2968,12 +3365,12 @@ class _BoundingBoxPainter extends CustomPainter {
 
       final fillPaint = Paint()
         ..color =
-            isSelected ? const Color(0x6690652D) : const Color(0x22315C4B);
+            isSelected ? const Color(0x55F59E0B) : const Color(0x220878F9);
       canvas.drawRRect(
           RRect.fromRectAndRadius(rect, const Radius.circular(3)), fillPaint);
 
       final borderPaint = Paint()
-        ..color = isSelected ? amberWarning : const Color(0x66315C4B)
+        ..color = isSelected ? amberWarning : const Color(0xAA0878F9)
         ..style = PaintingStyle.stroke
         ..strokeWidth = isSelected ? 2.0 : 0.8;
       canvas.drawRRect(
@@ -2994,13 +3391,13 @@ class _DrawingObjectPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final strokePaint = Paint()
-      ..color = const Color(0xFF315C4B)
+      ..color = const Color(0xFF7C3AED)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     final fillPaint = Paint()
-      ..color = const Color(0xFF315C4B).withValues(alpha: 0.08);
+      ..color = const Color(0xFF7C3AED).withValues(alpha: 0.10);
     final cornerPaint = Paint()
-      ..color = const Color(0xFF274A3D)
+      ..color = const Color(0xFF6D28D9)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0;
 

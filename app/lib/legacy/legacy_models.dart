@@ -111,6 +111,7 @@ class LegacyField {
     required this.reason,
     required this.status,
     this.recordIndex = 0,
+    this.suggestedValue,
     this.finalValue,
   });
   final String id;
@@ -119,6 +120,7 @@ class LegacyField {
   final int lineIndex;
   final String? ocrValue;
   final String? aiValue;
+  final String? suggestedValue;
 
   /// Review priority estimate from observable signals; not a probability.
   final double score;
@@ -143,6 +145,7 @@ class LegacyField {
         reason: reason,
         status: decision,
         recordIndex: recordIndex,
+        suggestedValue: suggestedValue,
         finalValue: decision == FieldStatus.unreadable ? null : value,
       );
 
@@ -154,6 +157,7 @@ class LegacyField {
         'page': page,
         'source_line': lineIndex,
         'ocr_value': ocrValue,
+        'on_device_suggestion': suggestedValue,
         'ai_suggestion': aiValue,
         'review_score': double.parse(score.toStringAsFixed(2)),
         'review_reason': reason,
@@ -165,11 +169,13 @@ class LegacyDocument {
       {required this.name,
       required this.pages,
       required this.fields,
-      required this.documentType});
+      required this.documentType,
+      this.sourcePath});
   final String name;
   final List<LegacyPage> pages;
   List<LegacyField> fields;
   final String documentType;
+  final String? sourcePath;
   double? cadPageWidth;
   String cadUnit = 'unit';
   String? cadCalibrationObjectId;
@@ -412,7 +418,7 @@ class LegacyDocument {
   String generateExecutiveAbstract() {
     final pageCount = pages.length;
     return 'This $documentType contains $pageCount scanned page${pageCount == 1 ? '' : 's'}. '
-        'LegacyLens preserved the source, extracted $totalOcrLines OCR lines, and prepared '
+        'Paperazzi preserved the source, extracted $totalOcrLines OCR lines, and prepared '
         '${fields.length} reviewable structured fields with source references. '
         '$needsReview unresolved value${needsReview == 1 ? '' : 's'} remain explicitly marked for human review.';
   }

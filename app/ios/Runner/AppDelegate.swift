@@ -5,6 +5,7 @@ import Vision
 import VisionKit
 import UniformTypeIdentifiers
 import CoreImage
+import CryptoKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -37,6 +38,30 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
       switch call.method {
       case "scanDocument": self.scan(result)
       case "pickAndRecognize": self.pick(result)
+      case "recognizeSaved":
+        guard let path = call.arguments as? String else {
+          result(FlutterError(code: "history", message: "Saved document path missing", details: nil)); return
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+          do {
+            let url = URL(fileURLWithPath: path)
+            let data = try Data(contentsOf: url)
+            let storedName = url.lastPathComponent
+            let displayName = storedName.firstIndex(of: "_").map {
+              String(storedName[storedName.index(after: $0)...])
+            } ?? storedName
+            var output = try self.process(
+              data: data,
+              name: displayName,
+              isPdf: url.pathExtension.lowercased() == "pdf")
+            output["historyPath"] = path
+            DispatchQueue.main.async { result(output) }
+          } catch {
+            DispatchQueue.main.async {
+              result(FlutterError(code: "history", message: "Could not reopen saved document", details: error.localizedDescription))
+            }
+          }
+        }
       case "recognizeSample":
         guard let bytes = call.arguments as? FlutterStandardTypedData else {
           result(FlutterError(code: "sample", message: "Demo sample unavailable", details: nil)); return
@@ -93,7 +118,7 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
         UIColor(red: 15/255, green: 23/255, blue: 42/255, alpha: 1.0).setFill()
         headerPath.fill()
 
-        let bannerTitle = "LEGACYLENS  •  EXECUTIVE ARCHIVAL DOSSIER"
+        let bannerTitle = "PAPERAZZI  •  EXECUTIVE DOCUMENT DOSSIER"
         bannerTitle.draw(at: CGPoint(x: 48, y: 46), withAttributes: [
           .font: UIFont.boldSystemFont(ofSize: 13),
           .foregroundColor: UIColor(red: 56/255, green: 189/255, blue: 248/255, alpha: 1.0)
@@ -206,7 +231,7 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
         "PostgreSQL / Snowflake / CSV".draw(at: CGPoint(x: statBox3.minX + 8, y: statBox3.minY + 18), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 10.5), .foregroundColor: UIColor(red: 37/255, green: 99/255, blue: 235/255, alpha: 1.0)])
 
         // Footer
-        let footerText = "REVIEWABLE LEGACYLENS EXTRACTION  •  UNRESOLVED VALUES REQUIRE HUMAN REVIEW  •  " + Date().description
+        let footerText = "REVIEWABLE PAPERAZZI EXTRACTION  •  UNRESOLVED VALUES REQUIRE HUMAN REVIEW  •  " + Date().description
         footerText.draw(at: CGPoint(x: 36, y: 752), withAttributes: [.font: UIFont.systemFont(ofSize: 7.5), .foregroundColor: UIColor.lightGray])
       }
 
@@ -295,7 +320,10 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
       do {
         let data = try Data(contentsOf: url)
         if data.count > 100_000_000 { throw LegacyImportError("Choose a file under 100 MB") }
-        let result = try self.process(data: data, name: url.lastPathComponent, isPdf: url.pathExtension.lowercased() == "pdf")
+        var result = try self.process(data: data, name: url.lastPathComponent, isPdf: url.pathExtension.lowercased() == "pdf")
+        if let archived = try? self.archiveSource(data: data, name: url.lastPathComponent) {
+          result["historyPath"] = archived.path
+        }
         DispatchQueue.main.async { callback(result) }
       } catch {
         DispatchQueue.main.async {
@@ -355,7 +383,24 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
   // MARK: - Image & Vision OCR Processing
   private static let ciContext = CIContext(options: [.useSoftwareRenderer: false])
 
+  private func archiveSource(data: Data, name: String) throws -> URL {
+    let support = try FileManager.default.url(
+      for: .applicationSupportDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true)
+    let directory = support.appendingPathComponent("PaperazziHistory", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let safeName = URL(fileURLWithPath: name).lastPathComponent
+    let destination = directory.appendingPathComponent("\(UUID().uuidString)_\(safeName)")
+    try data.write(to: destination, options: .atomic)
+    return destination
+  }
+
   private func process(data: Data, name: String, isPdf: Bool) throws -> [String: Any] {
+    let sourceFingerprint = SHA256.hash(data: data)
+      .map { String(format: "%02x", $0) }
+      .joined()
     if isPdf {
       guard let pdf = PDFDocument(data: data), pdf.pageCount > 0 else {
         throw LegacyImportError("This PDF could not be opened")
@@ -370,7 +415,7 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
       for index in 0..<pdf.pageCount {
         try autoreleasepool {
           guard let page = pdf.page(at: index) else { return }
-          print("📄 [LegacyLens] Processing page \(index + 1) of \(pdf.pageCount)...")
+          print("📄 [Paperazzi] Processing page \(index + 1) of \(pdf.pageCount)...")
           let pageBounds = page.bounds(for: .mediaBox)
           let maxDim: CGFloat = 1600.0
           let scale = min(maxDim / max(pageBounds.width, 1.0), maxDim / max(pageBounds.height, 1.0), 2.0)
@@ -389,16 +434,21 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
             ctx.cgContext.restoreGState()
           }
 
-          let pageData = try processSinglePage(image: image, pageNumber: index + 1)
+          let pageData = try processSinglePage(
+            image: image,
+            pageNumber: index + 1,
+            detectGeometry: pdf.pageCount <= 3 || index < 3)
           pages.append(pageData)
         }
       }
-      print("✅ [LegacyLens] Finished fast OCR for all \(pdf.pageCount) pages! Passing to UI.")
+      print("✅ [Paperazzi] Finished OCR for all \(pdf.pageCount) pages. Passing compact results to UI.")
       if pages.isEmpty { throw LegacyImportError("No page images could be read") }
-      return ["name": name, "pages": pages]
+      return ["name": name, "pages": pages, "sourceFingerprint": sourceFingerprint]
     } else {
       guard let image = UIImage(data: data) else { throw LegacyImportError("This image could not be opened") }
-      return try processImages(images: [image], name: name)
+      var output = try processImages(images: [image], name: name)
+      output["sourceFingerprint"] = sourceFingerprint
+      return output
     }
   }
 
@@ -412,7 +462,10 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
       try autoreleasepool {
         let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
         let normalized = renderer.image { _ in image.draw(at: .zero) }
-        let pageData = try processSinglePage(image: normalized, pageNumber: index + 1)
+        let pageData = try processSinglePage(
+          image: normalized,
+          pageNumber: index + 1,
+          detectGeometry: images.count <= 3 || index < 3)
         pages.append(pageData)
       }
     }
@@ -420,23 +473,50 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
     return ["name": name, "pages": pages]
   }
 
-  private func processSinglePage(image: UIImage, pageNumber: Int) throws -> [String: Any] {
+  private func processSinglePage(
+    image: UIImage,
+    pageNumber: Int,
+    detectGeometry: Bool
+  ) throws -> [String: Any] {
     guard let jpeg = image.jpegData(compressionQuality: 0.85),
           let cgImage = image.cgImage else {
       throw LegacyImportError("Could not render page image")
     }
-    // High-performance single-pass Apple Vision Neural Engine OCR
-    let ocrResult = try recognize(cgImage)
+    let originalResult = try recognize(cgImage)
+    var ocrResult = originalResult
+    var enhancedJpeg = jpeg
+    var enhancementApplied = false
+
+    // Faded paper and cursive handwriting benefit from a second local Vision
+    // pass. Limit this to the first three pages so large archives stay
+    // responsive, then keep whichever pass found more usable text.
+    if pageNumber <= 3 &&
+       (originalResult.meanConfidence < 0.97 || originalResult.lines.count < 60) {
+      let enhanced = enhancedForRecognition(image)
+      if let enhancedCg = enhanced.cgImage,
+         let candidateJpeg = enhanced.jpegData(compressionQuality: 0.88) {
+        let enhancedResult = try recognize(enhancedCg)
+        let originalScore = Double(originalResult.lines.count) + originalResult.meanConfidence
+        let enhancedScore = Double(enhancedResult.lines.count) + enhancedResult.meanConfidence
+        enhancedJpeg = candidateJpeg
+        if enhancedScore > originalScore {
+          ocrResult = enhancedResult
+          enhancementApplied = true
+        }
+      }
+    }
     return [
       "number": pageNumber,
       "image": FlutterStandardTypedData(bytes: jpeg),
-      "enhancedImage": FlutterStandardTypedData(bytes: jpeg),
-      "enhancementApplied": false,
-      "originalMeanConfidence": ocrResult.meanConfidence,
+      "enhancedImage": FlutterStandardTypedData(bytes: enhancedJpeg),
+      "enhancementApplied": enhancementApplied,
+      "originalMeanConfidence": originalResult.meanConfidence,
       "pixelWidth": cgImage.width,
       "pixelHeight": cgImage.height,
       "lines": ocrResult.lines,
-      "drawingObjects": try detectDrawingGeometry(cgImage, page: pageNumber),
+      "drawingObjects": detectGeometry
+        ? try detectDrawingGeometry(cgImage, page: pageNumber)
+        : [],
     ]
   }
 
@@ -465,7 +545,8 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
         }
         return $0.boundingBox.minX < $1.boundingBox.minX
       }
-    let lines: [[String: Any]] = observations.compactMap { observation in
+    var cropBudget = 40
+    let lines: [[String: Any]] = observations.enumerated().compactMap { index, observation in
         guard let candidate = observation.topCandidates(1).first else { return nil }
         let box = observation.boundingBox
         let width = CGFloat(cgImage.width), height = CGFloat(cgImage.height)
@@ -486,9 +567,12 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
          .integral
 
         var cropData = Data()
-        if expanded.width >= 4 && expanded.height >= 4,
+        let shouldCrop = cropBudget > 0 && (index < 12 || candidate.confidence < 0.85)
+        if shouldCrop,
+           expanded.width >= 4 && expanded.height >= 4,
            let croppedCg = cgImage.cropping(to: expanded) {
           cropData = UIImage(cgImage: croppedCg).jpegData(compressionQuality: 0.88) ?? Data()
+          cropBudget -= 1
         }
         return [
           "text": candidate.string,
