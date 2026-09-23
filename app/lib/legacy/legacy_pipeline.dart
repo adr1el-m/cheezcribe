@@ -56,6 +56,8 @@ class LegacyPipeline {
         enhancementApplied: page['enhancementApplied'] == true,
         originalMeanConfidence:
             (page['originalMeanConfidence'] as num?)?.toDouble(),
+        pixelWidth: (page['pixelWidth'] as num?)?.toInt() ?? 1,
+        pixelHeight: (page['pixelHeight'] as num?)?.toInt() ?? 1,
         lines: lines,
         drawingObjects: [
           for (final rawObject in (page['drawingObjects'] as List? ?? const []))
@@ -68,6 +70,16 @@ class LegacyPipeline {
                     .map((v) => (v as num).toDouble())
                     .toList(),
                 confidence: (rawObject['confidence'] as num? ?? 0).toDouble(),
+                points: (rawObject['points'] as List? ?? const [])
+                    .map((value) => (value as num).toDouble())
+                    .toList(),
+                closed: rawObject['closed'] != false,
+                sourceLabels: _nearbyDimensionLabels(
+                  lines,
+                  (rawObject['box'] as List)
+                      .map((value) => (value as num).toDouble())
+                      .toList(),
+                ),
               )
         ],
       ));
@@ -566,6 +578,28 @@ class LegacyPipeline {
 
     return _PageAnalysis(docType, suggestions);
   }
+}
+
+List<String> _nearbyDimensionLabels(List<OcrLine> lines, List<double> box) {
+  if (box.length < 4) return const [];
+  final pattern = RegExp(
+    r'(^|\s)\d+(?:[.,]\d+)?\s*(?:mm|cm|m|meter|meters|ft|feet|in|inch|inches|["\u2032\u2033])\b|diameter|radius|scale|elevation|length|width|height|lift',
+    caseSensitive: false,
+  );
+  final left = box[0] - 0.04;
+  final top = box[1] - 0.04;
+  final right = box[0] + box[2] + 0.04;
+  final bottom = box[1] + box[3] + 0.04;
+  return {
+    for (final line in lines)
+      if (line.box.length >= 4 &&
+          pattern.hasMatch(line.text) &&
+          line.box[0] + line.box[2] >= left &&
+          line.box[0] <= right &&
+          line.box[1] + line.box[3] >= top &&
+          line.box[1] <= bottom)
+        line.text.trim(),
+  }.take(4).toList();
 }
 
 class _PageAnalysis {

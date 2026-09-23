@@ -27,11 +27,13 @@ The first release targets images and scanned PDF pages on iOS and Android. iOS u
 - Persist original files and reviewer changes across restarts with a suitable store.
 - Verify the Android OCR adapter on a real device and build a web OCR adapter if needed.
 
-## P2: controlled drawing experiment
+## P2: smart CAD reconstruction assistant
 
-- Pick one drawing class with labeled units and geometry.
-- Identify a limited set of objects, preview an editable vector overlay, and export SVG.
-- Add DXF only after object semantics and geometry are checked.
+- iPhone Vision detects precise quadrilateral corners and selected top-level contours instead of exporting only bounding rectangles.
+- The shared pipeline links nearby OCR measurement text to vector primitives as review evidence.
+- The reviewer can select a detected object, enter one known real-world width, and calibrate SVG/DXF coordinates in mm, cm, m, inches, or feet.
+- SVG and DXF exports separate reviewed geometry and source-label layers and retain explicit review-required metadata.
+- This is editable reconstruction assistance, not automatic engineering certification. Object meaning, dimensions, scale selection, missing lines, and units must still be checked against the source.
 
 ## Five-person work split
 

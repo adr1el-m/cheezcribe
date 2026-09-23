@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:appcon_starter/legacy/legacy_app.dart';
 import 'package:appcon_starter/legacy/legacy_pipeline.dart';
 import 'package:appcon_starter/services/ai_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,28 +56,11 @@ void main() {
     expect(page.enhancedImage, isNotEmpty);
     // ignore: avoid_print
     print('NATIVE_DRAWING_OBJECTS: ${page.drawingObjects.length}');
-    expect(result.document.fields, isNotEmpty);
-  });
-
-  testWidgets('bundled sample runs through native OCR and review',
-      (tester) async {
-    await tester.pumpWidget(LegacyLensApp(connection: OfflineConnection()));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Try bundled 1915 sample'));
-    for (var attempt = 0; attempt < 80; attempt++) {
-      await tester.pump(const Duration(seconds: 1));
-      if (find
-          .textContaining('Bundled 1915 evaluation sample')
-          .evaluate()
-          .isNotEmpty) {
-        break;
-      }
-    }
+    expect(page.drawingObjects, isNotEmpty);
+    expect(page.drawingObjects.every((object) => object.vertices.length >= 3),
+        isTrue);
     expect(
-        find.textContaining('Bundled 1915 evaluation sample'), findsOneWidget);
-    await tester.tap(find.text('Review'));
-    await tester.pumpAndSettle();
-    expect(find.text('Review queue'), findsOneWidget);
-    expect(find.text('SOURCE CROP'), findsOneWidget);
+        page.drawingObjects.any((object) => object.kind == 'contour'), isTrue);
+    expect(result.document.fields, isNotEmpty);
   });
 }

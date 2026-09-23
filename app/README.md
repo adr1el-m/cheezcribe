@@ -26,6 +26,8 @@ The original rendered page, OCR text, source crop, AI suggestion, review score, 
 
 The app automatically stores up to twenty device-local structured checkpoints containing extracted fields, quality indicators, and review decisions. Source images are deliberately excluded from checkpoints and remain in the active session, so retain the permitted source and export before closing. The original input file is never modified. On-device OCR does not upload the page. If connected AI runs, the page image and OCR lines are sent to the configured Gemini service. Use only permitted, non-sensitive documents for the demo.
 
+For drawing pages, the iPhone pipeline detects quadrilaterals and selected contours, overlays their true vertices, associates nearby OCR dimension labels, and exports editable SVG/DXF. Use **Calibrate CAD scale** with one reviewer-confirmed reference width before relying on DXF coordinates. All inferred geometry, text associations, units, and scale remain review-required.
+
 ## Current platform boundary
 
 On iOS, a grayscale contrast and sharpening derivative is compared against original-scan OCR and selected only when line count or mean confidence improves. The original scan remains visible. Apple Vision also detects rectangular plan geometry; the app overlays it and exports review-required, unitless SVG and DXF primitives. This is a controlled rectangle workflow, not general semantic CAD reconstruction. Web still needs an OCR adapter, and real historical-source accuracy remains unmeasured.

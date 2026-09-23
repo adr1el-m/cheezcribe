@@ -1,20 +1,38 @@
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/ai_service.dart';
 import 'legacy_models.dart';
 import 'legacy_pipeline.dart';
 import 'session_checkpoint_store.dart';
 
-// Apple HIG-inspired executive design tokens for static/painter contexts
-const brandBlue = Color(0xFF2563EB);
-const brandIndigo = Color(0xFF4F46E5);
-const emeraldGreen = Color(0xFF059669);
-const amberWarning = Color(0xFFD97706);
-const roseDanger = Color(0xFFDC2626);
+// Restrained archival palette for static painters and status indicators.
+const brandBlue = Color(0xFF315C4B);
+const brandIndigo = Color(0xFF56636D);
+const emeraldGreen = Color(0xFF4F6F5D);
+const amberWarning = Color(0xFF90652D);
+const roseDanger = Color(0xFF92504D);
 
-/// Authentic Apple Liquid Glass container with real gaussian backdrop blur
+class SolidSvgIcon extends StatelessWidget {
+  const SolidSvgIcon(this.name, {super.key, this.size = 20, this.color});
+  final String name;
+  final double size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => SvgPicture.asset(
+        'assets/icons/$name.svg',
+        width: size,
+        height: size,
+        colorFilter: ColorFilter.mode(
+          color ?? IconTheme.of(context).color ?? const Color(0xFF263238),
+          BlendMode.srcIn,
+        ),
+      );
+}
+
+/// Solid, bordered surface used for primary workflow groups.
 class LiquidGlassBox extends StatelessWidget {
   const LiquidGlassBox({
     super.key,
@@ -40,44 +58,25 @@ class LiquidGlassBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bgColor = customBgColor ??
-        (isDark
-            ? const Color(0xFF121B2A).withValues(alpha: 0.70)
-            : Colors.white.withValues(alpha: 0.82));
+        (isDark ? const Color(0xFF202523) : const Color(0xFFFFFEFA));
 
     final borderColor = customBorderColor ??
-        (isDark
-            ? Colors.white.withValues(alpha: 0.12)
-            : Colors.white.withValues(alpha: 0.80));
-
-    final shadowColor = isDark
-        ? Colors.black.withValues(alpha: 0.35)
-        : const Color(0xFF0F172A).withValues(alpha: 0.05);
+        (isDark ? const Color(0xFF3A413E) : const Color(0xFFD9D5CC));
 
     return Container(
       margin: margin,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: shadowColor,
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+      decoration:
+          BoxDecoration(borderRadius: BorderRadius.circular(borderRadius)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(borderRadius),
-              border: Border.all(color: borderColor, width: borderWidth),
-            ),
-            child: child,
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(color: borderColor, width: borderWidth),
           ),
+          child: child,
         ),
       ),
     );
@@ -92,7 +91,7 @@ class LegacyLensApp extends StatefulWidget {
 }
 
 class _LegacyLensAppState extends State<LegacyLensApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+  final ThemeMode _themeMode = ThemeMode.light;
 
   bool get isDark =>
       _themeMode == ThemeMode.dark ||
@@ -101,29 +100,29 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
               Brightness.dark);
 
   Color get canvasBg =>
-      isDark ? const Color(0xFF090E17) : const Color(0xFFF8FAFC);
+      isDark ? const Color(0xFF191D1B) : const Color(0xFFF5F2EA);
   Color get cardBg =>
-      isDark ? const Color(0xFF121B2A) : const Color(0xFFFFFFFF);
+      isDark ? const Color(0xFF222725) : const Color(0xFFFFFEFA);
   Color get textPrimary =>
-      isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
+      isDark ? const Color(0xFFF3F0E8) : const Color(0xFF263238);
   Color get textSecondary =>
-      isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+      isDark ? const Color(0xFFB3BAB5) : const Color(0xFF5F6965);
   Color get textMuted =>
-      isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+      isDark ? const Color(0xFF8B948F) : const Color(0xFF808985);
   Color get borderLight =>
-      isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+      isDark ? const Color(0xFF3A413E) : const Color(0xFFD9D5CC);
   Color get borderSubtle =>
-      isDark ? const Color(0xFF151F30) : const Color(0xFFF1F5F9);
+      isDark ? const Color(0xFF2B312E) : const Color(0xFFEAE6DD);
   Color get brandBlue =>
-      isDark ? const Color(0xFF3B82F6) : const Color(0xFF2563EB);
+      isDark ? const Color(0xFF88A595) : const Color(0xFF315C4B);
   Color get brandIndigo =>
-      isDark ? const Color(0xFF6366F1) : const Color(0xFF4F46E5);
+      isDark ? const Color(0xFFA5ADB3) : const Color(0xFF56636D);
   Color get emeraldGreen =>
-      isDark ? const Color(0xFF10B981) : const Color(0xFF059669);
+      isDark ? const Color(0xFF91AA9B) : const Color(0xFF4F6F5D);
   Color get amberWarning =>
-      isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706);
+      isDark ? const Color(0xFFC5A270) : const Color(0xFF90652D);
   Color get roseDanger =>
-      isDark ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
+      isDark ? const Color(0xFFC98B87) : const Color(0xFF92504D);
   late final pipeline = LegacyPipeline(widget.connection);
   final checkpointStore = SessionCheckpointStore();
   LegacyDocument? document;
@@ -268,6 +267,97 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
     } catch (e) {
       if (mounted) setState(() => error = 'Could not generate summary PDF: $e');
     }
+  }
+
+  Future<void> calibrateCad() async {
+    final doc = document;
+    if (doc == null) return;
+    final objects = doc.pages.expand((page) => page.drawingObjects).toList();
+    if (objects.isEmpty) return;
+    var selected = objects.first;
+    var unit = doc.cadUnit == 'unit' ? 'mm' : doc.cadUnit;
+    final widthController = TextEditingController();
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Calibrate CAD scale'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Choose one detected object and enter its known real-world width. All DXF coordinates will use this reviewed scale.',
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<DrawingObject>(
+                initialValue: selected,
+                decoration:
+                    const InputDecoration(labelText: 'Reference object'),
+                items: [
+                  for (var i = 0; i < objects.length; i++)
+                    DropdownMenuItem(
+                      value: objects[i],
+                      child: Text('${objects[i].kind} #${i + 1}'),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value != null) setDialogState(() => selected = value);
+                },
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: widthController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration:
+                          const InputDecoration(labelText: 'Known width'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  DropdownButton<String>(
+                    value: unit,
+                    items: const [
+                      DropdownMenuItem(value: 'mm', child: Text('mm')),
+                      DropdownMenuItem(value: 'cm', child: Text('cm')),
+                      DropdownMenuItem(value: 'm', child: Text('m')),
+                      DropdownMenuItem(value: 'in', child: Text('in')),
+                      DropdownMenuItem(value: 'ft', child: Text('ft')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setDialogState(() => unit = value);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Apply reviewed scale'),
+            ),
+          ],
+        ),
+      ),
+    );
+    final knownWidth = double.tryParse(widthController.text.trim());
+    widthController.dispose();
+    if (!mounted || accepted != true || knownWidth == null || knownWidth <= 0) {
+      return;
+    }
+    setState(() {
+      doc.calibrateCad(object: selected, knownWidth: knownWidth, unit: unit);
+    });
+    persistedSessionCount = await checkpointStore.save(doc);
+    if (mounted) setState(() {});
   }
 
   void decide(LegacyField field, FieldStatus status, String? value,
@@ -628,51 +718,6 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
     keyController.dispose();
   }
 
-  Widget _themeToggleButton() {
-    final icon = _themeMode == ThemeMode.light
-        ? Icons.light_mode_rounded
-        : _themeMode == ThemeMode.dark
-            ? Icons.dark_mode_rounded
-            : Icons.brightness_auto_rounded;
-    final tooltip = _themeMode == ThemeMode.light
-        ? 'Theme: Light'
-        : _themeMode == ThemeMode.dark
-            ? 'Theme: Dark'
-            : 'Theme: System';
-
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          setState(() {
-            _themeMode = switch (_themeMode) {
-              ThemeMode.system => ThemeMode.light,
-              ThemeMode.light => ThemeMode.dark,
-              ThemeMode.dark => ThemeMode.system,
-            };
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.black.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.12)
-                  : Colors.black.withValues(alpha: 0.08),
-            ),
-          ),
-          child: Icon(icon, size: 16, color: brandBlue),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) => MaterialApp(
         title: 'LegacyLens',
@@ -681,35 +726,35 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
         theme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.light,
-          scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+          scaffoldBackgroundColor: const Color(0xFFF5F2EA),
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2563EB),
-            surface: const Color(0xFFF8FAFC),
+            seedColor: const Color(0xFF315C4B),
+            surface: const Color(0xFFFFFEFA),
             brightness: Brightness.light,
           ),
           textTheme: const TextTheme(
             bodyMedium:
-                TextStyle(color: Color(0xFF0F172A), letterSpacing: -0.1),
+                TextStyle(color: Color(0xFF263238), letterSpacing: -0.1),
             titleLarge: TextStyle(
-                color: Color(0xFF0F172A), fontWeight: FontWeight.w700),
+                color: Color(0xFF263238), fontWeight: FontWeight.w700),
           ),
           cardTheme: CardThemeData(
             color: Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
-              side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+              side: const BorderSide(color: Color(0xFFD9D5CC), width: 1),
             ),
           ),
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFF8FAFC),
+            backgroundColor: Color(0xFFF5F2EA),
             elevation: 0,
-            foregroundColor: Color(0xFF0F172A),
+            foregroundColor: Color(0xFF263238),
             centerTitle: false,
           ),
           filledButtonTheme: FilledButtonThemeData(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: const Color(0xFF315C4B),
               foregroundColor: Colors.white,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -721,8 +766,8 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
           ),
           outlinedButtonTheme: OutlinedButtonThemeData(
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF0F172A),
-              side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
+              foregroundColor: const Color(0xFF263238),
+              side: const BorderSide(color: Color(0xFFD9D5CC), width: 1.2),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
@@ -736,7 +781,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
           brightness: Brightness.dark,
           scaffoldBackgroundColor: const Color(0xFF090E17),
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF3B82F6),
+            seedColor: const Color(0xFF88A595),
             surface: const Color(0xFF090E17),
             brightness: Brightness.dark,
           ),
@@ -762,7 +807,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
           ),
           filledButtonTheme: FilledButtonThemeData(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
+              backgroundColor: const Color(0xFF6F8E7E),
               foregroundColor: Colors.white,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -810,15 +855,15 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                             color: brandBlue.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: Icon(Icons.document_scanner_rounded,
+                          child: SolidSvgIcon('archive',
                               color: brandBlue, size: 28),
                         ),
                       ),
                       destinations: [
                         NavigationRailDestination(
-                          icon: const Icon(Icons.folder_outlined),
+                          icon: const SolidSvgIcon('archive'),
                           selectedIcon:
-                              Icon(Icons.folder_rounded, color: brandBlue),
+                              SolidSvgIcon('archive', color: brandBlue),
                           label: const Text('Documents'),
                         ),
                         NavigationRailDestination(
@@ -826,21 +871,20 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                             isLabelVisible: pendingCount > 0,
                             label: Text('$pendingCount'),
                             backgroundColor: amberWarning,
-                            child: const Icon(Icons.fact_check_outlined),
+                            child: const SolidSvgIcon('review'),
                           ),
                           selectedIcon: Badge(
                             isLabelVisible: pendingCount > 0,
                             label: Text('$pendingCount'),
                             backgroundColor: amberWarning,
-                            child: Icon(Icons.fact_check_rounded,
-                                color: brandBlue),
+                            child: SolidSvgIcon('review', color: brandBlue),
                           ),
                           label: const Text('Review'),
                         ),
                         NavigationRailDestination(
-                          icon: const Icon(Icons.ios_share_rounded),
+                          icon: const SolidSvgIcon('export'),
                           selectedIcon:
-                              Icon(Icons.ios_share_rounded, color: brandBlue),
+                              SolidSvgIcon('export', color: brandBlue),
                           label: const Text('Export'),
                         ),
                       ],
@@ -863,64 +907,48 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
             ),
             bottomNavigationBar: wide
                 ? null
-                : ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF0F172A).withValues(alpha: 0.75)
-                              : Colors.white.withValues(alpha: 0.85),
-                          border: Border(
-                              top: BorderSide(
-                                  color: isDark
-                                      ? Colors.white.withValues(alpha: 0.1)
-                                      : borderLight.withValues(alpha: 0.8),
-                                  width: 0.8)),
+                : Container(
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      border: Border(top: BorderSide(color: borderLight)),
+                    ),
+                    child: NavigationBar(
+                      backgroundColor: cardBg,
+                      indicatorColor: const Color(0xFFDDE5DF),
+                      selectedIndex: tab,
+                      onDestinationSelected: (v) {
+                        HapticFeedback.selectionClick();
+                        setState(() => tab = v);
+                      },
+                      destinations: [
+                        NavigationDestination(
+                          icon: SolidSvgIcon('archive', color: textSecondary),
+                          selectedIcon:
+                              SolidSvgIcon('archive', color: brandBlue),
+                          label: 'Documents',
                         ),
-                        child: NavigationBar(
-                          backgroundColor: Colors.transparent,
-                          indicatorColor: brandBlue.withValues(alpha: 0.15),
-                          selectedIndex: tab,
-                          onDestinationSelected: (v) {
-                            HapticFeedback.selectionClick();
-                            setState(() => tab = v);
-                          },
-                          destinations: [
-                            NavigationDestination(
-                              icon: Icon(Icons.folder_outlined,
-                                  color: textSecondary),
-                              selectedIcon:
-                                  Icon(Icons.folder_rounded, color: brandBlue),
-                              label: 'Documents',
-                            ),
-                            NavigationDestination(
-                              icon: Badge(
-                                isLabelVisible: pendingCount > 0,
-                                label: Text('$pendingCount'),
-                                backgroundColor: amberWarning,
-                                child: Icon(Icons.fact_check_outlined,
-                                    color: textSecondary),
-                              ),
-                              selectedIcon: Badge(
-                                isLabelVisible: pendingCount > 0,
-                                label: Text('$pendingCount'),
-                                backgroundColor: amberWarning,
-                                child: Icon(Icons.fact_check_rounded,
-                                    color: brandBlue),
-                              ),
-                              label: 'Review',
-                            ),
-                            NavigationDestination(
-                              icon: Icon(Icons.ios_share_rounded,
-                                  color: textSecondary),
-                              selectedIcon: Icon(Icons.ios_share_rounded,
-                                  color: brandBlue),
-                              label: 'Export',
-                            ),
-                          ],
+                        NavigationDestination(
+                          icon: Badge(
+                            isLabelVisible: pendingCount > 0,
+                            label: Text('$pendingCount'),
+                            backgroundColor: amberWarning,
+                            child: SolidSvgIcon('review', color: textSecondary),
+                          ),
+                          selectedIcon: Badge(
+                            isLabelVisible: pendingCount > 0,
+                            label: Text('$pendingCount'),
+                            backgroundColor: amberWarning,
+                            child: SolidSvgIcon('review', color: brandBlue),
+                          ),
+                          label: 'Review',
                         ),
-                      ),
+                        NavigationDestination(
+                          icon: SolidSvgIcon('export', color: textSecondary),
+                          selectedIcon:
+                              SolidSvgIcon('export', color: brandBlue),
+                          label: 'Export',
+                        ),
+                      ],
                     ),
                   ),
           );
@@ -930,57 +958,6 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
   Widget _documents({required bool wide}) => ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         children: [
-          // Header / Eyebrow badge with clickable AI status pill
-          Row(
-            children: [
-              Flexible(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: brandBlue.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: brandBlue.withValues(alpha: 0.2)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.auto_awesome, size: 13, color: brandBlue),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          wide ? 'TEAM 08  /  LEGACY KNOWLEDGE' : 'TEAM 08',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: brandBlue,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 10,
-                              letterSpacing: 1.1),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _themeToggleButton(),
-              const SizedBox(width: 8),
-              InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: openAiSettings,
-                child: _statusChip(
-                  label:
-                      widget.connection.ready ? 'Gemini Active' : 'Connect AI',
-                  color: widget.connection.ready ? emeraldGreen : brandBlue,
-                  icon: widget.connection.ready
-                      ? Icons.cloud_done_rounded
-                      : Icons.tune_rounded,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           Text('Make history usable.',
               style: TextStyle(
                   color: textPrimary,
@@ -990,7 +967,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                   height: 1.15)),
           const SizedBox(height: 6),
           Text(
-              'Turn fragile physical scans into verifiable digital assets with on-device $ocrEngineName OCR and structured Gemini verification.',
+              'Turn fragile physical scans into reviewable digital assets with on-device $ocrEngineName OCR and optional Gemini interpretation.',
               style:
                   TextStyle(color: textSecondary, fontSize: 14, height: 1.45)),
           const SizedBox(height: 20),
@@ -1014,11 +991,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                   onPressed: supportsImport && !busy
                       ? () => import(camera: supportsCameraScan)
                       : null,
-                  icon: Icon(
-                      supportsCameraScan
-                          ? Icons.document_scanner_rounded
-                          : Icons.add_photo_alternate_rounded,
-                      size: 22),
+                  icon: const SolidSvgIcon('scan', size: 22),
                   label: Text(
                       supportsCameraScan
                           ? 'Scan Paper with Camera'
@@ -1035,16 +1008,8 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                         borderRadius: BorderRadius.circular(14)),
                   ),
                   onPressed: supportsImport && !busy ? () => import() : null,
-                  icon: const Icon(Icons.add_photo_alternate_rounded, size: 18),
+                  icon: const SolidSvgIcon('import', size: 18),
                   label: const Text('Import Image or PDF File'),
-                ),
-                const SizedBox(height: 10),
-                TextButton.icon(
-                  onPressed: supportsImport && !busy
-                      ? () => import(sample: true)
-                      : null,
-                  icon: const Icon(Icons.science_outlined, size: 18),
-                  label: const Text('Try bundled 1915 sample'),
                 ),
                 const SizedBox(height: 14),
                 Divider(height: 1, color: borderSubtle),
@@ -1060,7 +1025,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.bolt_rounded, size: 20, color: emeraldGreen),
+                      SolidSvgIcon('scan', size: 20, color: emeraldGreen),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -1092,10 +1057,10 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                     dense: true,
                     title: Row(
                       children: [
-                        Icon(Icons.cloud_outlined, size: 18, color: brandBlue),
+                        SolidSvgIcon('ai', size: 18, color: brandBlue),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text('Cloud Gemini Enrichment (Optional)',
+                          child: Text('Cloud assist',
                               style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: textPrimary,
@@ -1182,14 +1147,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: brandBlue.withValues(alpha: 0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: brandBlue.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          border: Border.all(color: borderLight),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1202,8 +1160,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                     color: brandBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.auto_stories_rounded,
-                      color: brandBlue, size: 20),
+                  child: SolidSvgIcon('archive', color: brandBlue, size: 20),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1424,13 +1381,6 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: highlight ? color.withValues(alpha: 0.5) : borderLight),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            )
-          ],
         ),
         child: Row(
           children: [
@@ -2357,13 +2307,6 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
               color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFDF8),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: brandBlue.withValues(alpha: 0.25)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: line?.crop != null && line!.crop!.isNotEmpty
                 ? ClipRRect(
@@ -2617,12 +2560,9 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
           isDark: isDark,
           borderRadius: 20,
           padding: const EdgeInsets.all(20),
-          customBgColor: isDark
-              ? const Color(0xFF0F1E36).withValues(alpha: 0.85)
-              : const Color(0xFFF1F6FF).withValues(alpha: 0.90),
-          customBorderColor: isDark
-              ? brandBlue.withValues(alpha: 0.3)
-              : brandBlue.withValues(alpha: 0.25),
+          customBgColor:
+              isDark ? const Color(0xFF222725) : const Color(0xFFF0EDE5),
+          customBorderColor: borderLight,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2634,8 +2574,7 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                       color: brandBlue.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.picture_as_pdf_rounded,
-                        color: brandBlue, size: 22),
+                    child: SolidSvgIcon('archive', color: brandBlue, size: 22),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -2664,8 +2603,8 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.white.withValues(alpha: 0.80),
+                      ? const Color(0xFF2B312E)
+                      : const Color(0xFFFFFEFA),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                       color: isDark
@@ -2741,13 +2680,20 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
                     ),
                   if (doc.drawingObjectCount > 0) ...[
                     OutlinedButton.icon(
+                      onPressed: calibrateCad,
+                      icon: const SolidSvgIcon('cad', size: 18),
+                      label: Text(doc.cadIsCalibrated
+                          ? 'Recalibrate CAD scale'
+                          : 'Calibrate CAD scale'),
+                    ),
+                    OutlinedButton.icon(
                       onPressed: () => export('svg'),
-                      icon: const Icon(Icons.polyline_rounded, size: 18),
+                      icon: const SolidSvgIcon('cad', size: 18),
                       label: const Text('Save drawing SVG'),
                     ),
                     OutlinedButton.icon(
                       onPressed: () => export('dxf'),
-                      icon: const Icon(Icons.architecture_rounded, size: 18),
+                      icon: const SolidSvgIcon('cad', size: 18),
                       label: const Text('Save CAD DXF'),
                     ),
                   ],
@@ -2756,7 +2702,9 @@ class _LegacyLensAppState extends State<LegacyLensApp> {
               if (doc.drawingObjectCount > 0) ...[
                 const SizedBox(height: 10),
                 Text(
-                  'Detected rectangles use normalized page coordinates and require scale and semantic review before engineering use.',
+                  doc.cadIsCalibrated
+                      ? 'DXF scale calibrated from ${doc.cadCalibrationObjectId} in ${doc.cadUnit}. Traced geometry and inferred labels still require engineering review.'
+                      : 'Quadrilaterals and contours are editable vector traces. Calibrate one known width before DXF export; geometry, labels, units, and semantics remain review-required.',
                   style: TextStyle(color: textMuted, fontSize: 11, height: 1.4),
                 ),
               ],
@@ -3019,14 +2967,13 @@ class _BoundingBoxPainter extends CustomPainter {
       );
 
       final fillPaint = Paint()
-        ..color = isSelected
-            ? const Color(0x66F59E0B) // Amber highlight for selected
-            : const Color(0x222563EB); // Subtle blue for others
+        ..color =
+            isSelected ? const Color(0x6690652D) : const Color(0x22315C4B);
       canvas.drawRRect(
           RRect.fromRectAndRadius(rect, const Radius.circular(3)), fillPaint);
 
       final borderPaint = Paint()
-        ..color = isSelected ? amberWarning : const Color(0x662563EB)
+        ..color = isSelected ? amberWarning : const Color(0x66315C4B)
         ..style = PaintingStyle.stroke
         ..strokeWidth = isSelected ? 2.0 : 0.8;
       canvas.drawRRect(
@@ -3047,13 +2994,13 @@ class _DrawingObjectPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final strokePaint = Paint()
-      ..color = const Color(0xFF2563EB)
+      ..color = const Color(0xFF315C4B)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     final fillPaint = Paint()
-      ..color = const Color(0xFF2563EB).withValues(alpha: 0.08);
+      ..color = const Color(0xFF315C4B).withValues(alpha: 0.08);
     final cornerPaint = Paint()
-      ..color = const Color(0xFF1D4ED8)
+      ..color = const Color(0xFF274A3D)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0;
 
@@ -3066,8 +3013,18 @@ class _DrawingObjectPainter extends CustomPainter {
         object.box[2] * size.width,
         object.box[3] * size.height,
       );
-      canvas.drawRect(rect, fillPaint);
-      canvas.drawRect(rect, strokePaint);
+      final vertices = object.vertices
+          .map((point) => Offset(point[0] * size.width, point[1] * size.height))
+          .toList();
+      if (vertices.length >= 2) {
+        final path = Path()..moveTo(vertices.first.dx, vertices.first.dy);
+        for (final point in vertices.skip(1)) {
+          path.lineTo(point.dx, point.dy);
+        }
+        if (object.closed) path.close();
+        if (object.closed) canvas.drawPath(path, fillPaint);
+        canvas.drawPath(path, strokePaint);
+      }
 
       // Precision CAD corner ticks
       const tick = 10.0;
@@ -3093,7 +3050,10 @@ class _DrawingObjectPainter extends CustomPainter {
           rect.bottomRight - const Offset(0, tick), cornerPaint);
 
       // Engineering badge chip
-      final label = 'CAD #${i + 1} • ${(object.confidence * 100).toInt()}%';
+      final evidence =
+          object.sourceLabels.isEmpty ? '' : ' • ${object.sourceLabels.first}';
+      final label =
+          '${object.kind.toUpperCase()} #${i + 1} • ${(object.confidence * 100).toInt()}%$evidence';
       final span = TextSpan(
         text: label,
         style: const TextStyle(
@@ -3115,7 +3075,7 @@ class _DrawingObjectPainter extends CustomPainter {
         textPainter.height + 4,
       );
       final badgePaint = Paint()
-        ..color = const Color(0xFF1E293B).withValues(alpha: 0.88);
+        ..color = const Color(0xFF263238).withValues(alpha: 0.92);
       canvas.drawRRect(
         RRect.fromRectAndRadius(badgeRect, const Radius.circular(4)),
         badgePaint,

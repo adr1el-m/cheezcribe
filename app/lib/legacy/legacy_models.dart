@@ -23,6 +23,8 @@ class LegacyPage {
       this.enhancedImage,
       this.enhancementApplied = false,
       this.originalMeanConfidence,
+      this.pixelWidth = 1,
+      this.pixelHeight = 1,
       this.drawingObjects = const []});
   final int number;
 
@@ -33,6 +35,8 @@ class LegacyPage {
   final Uint8List? enhancedImage;
   final bool enhancementApplied;
   final double? originalMeanConfidence;
+  final int pixelWidth;
+  final int pixelHeight;
   final List<OcrLine> lines;
   final List<DrawingObject> drawingObjects;
   String get ocrText => lines.map((line) => line.text).join('\n');
@@ -48,18 +52,46 @@ class DrawingObject {
     required this.kind,
     required this.box,
     required this.confidence,
+    this.points = const [],
+    this.closed = true,
+    this.sourceLabels = const [],
   });
 
   final String id;
   final String kind;
   final List<double> box;
   final double confidence;
+  final List<double> points;
+  final bool closed;
+  final List<String> sourceLabels;
+
+  List<List<double>> get vertices {
+    if (points.length >= 6 && points.length.isEven) {
+      return [
+        for (var i = 0; i < points.length; i += 2) [points[i], points[i + 1]],
+      ];
+    }
+    if (box.length < 4) return const [];
+    final left = box[0],
+        top = box[1],
+        right = left + box[2],
+        bottom = top + box[3];
+    return [
+      [left, top],
+      [right, top],
+      [right, bottom],
+      [left, bottom],
+    ];
+  }
 
   Map<String, Object> toJson() => {
         'id': id,
         'kind': kind,
         'box': box.map((v) => double.parse(v.toStringAsFixed(5))).toList(),
         'confidence': double.parse(confidence.toStringAsFixed(3)),
+        'points': vertices,
+        'closed': closed,
+        'source_labels': sourceLabels,
         'units': 'normalized_page',
         'review_required': true,
       };
@@ -138,6 +170,9 @@ class LegacyDocument {
   final List<LegacyPage> pages;
   List<LegacyField> fields;
   final String documentType;
+  double? cadPageWidth;
+  String cadUnit = 'unit';
+  String? cadCalibrationObjectId;
   int get needsReview => fields.where((f) => f.needsReview).length;
   int get resolved => fields.where((f) => f.resolved).length;
   int get readyCandidates =>
@@ -158,6 +193,28 @@ class LegacyDocument {
           total + page.lines.where((line) => line.confidence < 0.80).length);
   int get drawingObjectCount =>
       pages.fold(0, (total, page) => total + page.drawingObjects.length);
+  int get drawingLabelCount => pages.fold(
+      0,
+      (total, page) =>
+          total +
+          page.drawingObjects
+              .fold(0, (sum, object) => sum + object.sourceLabels.length));
+  bool get cadIsCalibrated => cadPageWidth != null && cadPageWidth! > 0;
+
+  void calibrateCad({
+    required DrawingObject object,
+    required double knownWidth,
+    required String unit,
+  }) {
+    if (object.box.length < 4 || object.box[2] <= 0 || knownWidth <= 0) {
+      throw ArgumentError(
+          'A positive known width and valid geometry are required.');
+    }
+    cadPageWidth = knownWidth / object.box[2];
+    cadUnit = unit.trim().isEmpty ? 'unit' : unit.trim();
+    cadCalibrationObjectId = object.id;
+  }
+
   double get sourceLinkedRate => fields.isEmpty
       ? 0
       : fields.where((f) => f.lineIndex >= 0).length / fields.length;
@@ -172,6 +229,8 @@ class LegacyDocument {
         'reviewed_or_ready_fields': resolved,
         'enhanced_pages': pages.where((p) => p.enhancementApplied).length,
         'drawing_objects': drawingObjectCount,
+        'drawing_source_labels': drawingLabelCount,
+        'cad_calibrated': cadIsCalibrated,
         'claim_boundary':
             'Quality indicators route review; they are not an accuracy percentage.',
       };
@@ -198,51 +257,106 @@ class LegacyDocument {
                 'objects': page.drawingObjects.map((o) => o.toJson()).toList(),
               }
         ],
+        'cad_calibration': {
+          'calibrated': cadIsCalibrated,
+          'page_width': cadPageWidth,
+          'unit': cadUnit,
+          'reference_object': cadCalibrationObjectId,
+        },
         'fields': fields.map((field) => field.toJson()).toList(),
       });
 
   String exportSvg() {
-    final objects = pages.expand((page) => page.drawingObjects).toList();
+    final firstPage = pages.firstOrNull;
+    final pageWidth = cadPageWidth ?? 1000;
+    final firstAspect = firstPage != null && firstPage.pixelWidth > 0
+        ? firstPage.pixelHeight / firstPage.pixelWidth
+        : 1.0;
+    final pageHeight = pageWidth * firstAspect;
     final buffer = StringBuffer()
       ..writeln('<?xml version="1.0" encoding="UTF-8"?>')
       ..writeln(
-          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">')
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pageWidth.toStringAsFixed(5)} ${pageHeight.toStringAsFixed(5)}" data-units="${_xml(cadIsCalibrated ? cadUnit : 'normalized')}">')
       ..writeln(
-          '<!-- Unitless detected rectangles. Review and set scale before engineering use. -->')
-      ..writeln('<g fill="none" stroke="#2563eb" stroke-width="3">');
-    for (final object in objects) {
-      if (object.box.length < 4) continue;
-      final x = object.box[0] * 1000;
-      final y = object.box[1] * 1000;
-      final width = object.box[2] * 1000;
-      final height = object.box[3] * 1000;
+          '<!-- AI-assisted vector trace. Geometry, labels, and scale require human review. -->');
+    for (final page in pages) {
+      final currentAspect =
+          page.pixelWidth > 0 ? page.pixelHeight / page.pixelWidth : 1.0;
+      final currentHeight = pageWidth * currentAspect;
       buffer.writeln(
-          '<rect id="${object.id}" x="${x.toStringAsFixed(2)}" y="${y.toStringAsFixed(2)}" width="${width.toStringAsFixed(2)}" height="${height.toStringAsFixed(2)}" data-confidence="${object.confidence.toStringAsFixed(3)}"/>');
+          '<g id="page-${page.number}" data-page-height="${currentHeight.toStringAsFixed(5)}" fill="none" stroke="#2563eb" stroke-width="${(pageWidth * 0.003).toStringAsFixed(5)}">');
+      for (final object in page.drawingObjects) {
+        final vertices = object.vertices;
+        if (vertices.length < 2) continue;
+        final points = vertices
+            .map((point) =>
+                '${(point[0] * pageWidth).toStringAsFixed(5)},${(point[1] * currentHeight).toStringAsFixed(5)}')
+            .join(' ');
+        buffer.writeln(
+            '<${object.closed ? 'polygon' : 'polyline'} id="${object.id}" points="$points" data-kind="${object.kind}" data-confidence="${object.confidence.toStringAsFixed(3)}" data-review-required="true"/>');
+        if (object.sourceLabels.isNotEmpty) {
+          final x = object.box[0] * pageWidth;
+          final y = object.box[1] * currentHeight;
+          buffer.writeln(
+              '<text x="${x.toStringAsFixed(5)}" y="${y.toStringAsFixed(5)}" fill="#7c3aed" font-size="${(pageWidth * 0.018).toStringAsFixed(5)}">${_xml(object.sourceLabels.first)}</text>');
+        }
+      }
+      buffer.writeln('</g>');
     }
-    buffer.writeln('</g></svg>');
+    buffer.writeln('</svg>');
     return buffer.toString();
   }
 
   String exportDxf() {
     final buffer = StringBuffer()
-      ..writeln('0\nSECTION\n2\nHEADER\n0\nENDSEC')
+      ..writeln('0\nSECTION\n2\nHEADER')
+      ..writeln('9\n\$INSUNITS\n70\n${_dxfUnitCode(cadUnit)}')
+      ..writeln(
+          '999\nAI-assisted trace; all geometry and labels require review.')
+      ..writeln('0\nENDSEC')
       ..writeln('0\nSECTION\n2\nENTITIES');
-    for (final object in pages.expand((page) => page.drawingObjects)) {
-      if (object.box.length < 4) continue;
-      final x1 = object.box[0] * 1000;
-      final y1 = (1 - object.box[1] - object.box[3]) * 1000;
-      final x2 = x1 + object.box[2] * 1000;
-      final y2 = y1 + object.box[3] * 1000;
-      buffer
-        ..writeln('0\nLWPOLYLINE\n8\nDETECTED_GEOMETRY\n90\n4\n70\n1')
-        ..writeln('10\n${x1.toStringAsFixed(3)}\n20\n${y1.toStringAsFixed(3)}')
-        ..writeln('10\n${x2.toStringAsFixed(3)}\n20\n${y1.toStringAsFixed(3)}')
-        ..writeln('10\n${x2.toStringAsFixed(3)}\n20\n${y2.toStringAsFixed(3)}')
-        ..writeln('10\n${x1.toStringAsFixed(3)}\n20\n${y2.toStringAsFixed(3)}');
+    for (final page in pages) {
+      final pageWidth = cadPageWidth ?? 1000;
+      final aspect =
+          page.pixelWidth > 0 ? page.pixelHeight / page.pixelWidth : 1.0;
+      final pageHeight = pageWidth * aspect;
+      for (final object in page.drawingObjects) {
+        final vertices = object.vertices;
+        if (vertices.length < 2) continue;
+        buffer.writeln(
+            '0\nLWPOLYLINE\n8\n${object.kind.toUpperCase()}_REVIEW\n90\n${vertices.length}\n70\n${object.closed ? 1 : 0}');
+        for (final point in vertices) {
+          final x = point[0] * pageWidth;
+          final y = (1 - point[1]) * pageHeight;
+          buffer.writeln(
+              '10\n${x.toStringAsFixed(5)}\n20\n${y.toStringAsFixed(5)}');
+        }
+        if (object.sourceLabels.isNotEmpty) {
+          final x = object.box[0] * pageWidth;
+          final y = (1 - object.box[1]) * pageHeight;
+          buffer.writeln(
+              '0\nTEXT\n8\nSOURCE_LABELS\n10\n${x.toStringAsFixed(5)}\n20\n${y.toStringAsFixed(5)}\n40\n${(pageWidth * 0.012).toStringAsFixed(5)}\n1\n${object.sourceLabels.first}');
+        }
+      }
     }
     buffer.writeln('0\nENDSEC\n0\nEOF');
     return buffer.toString();
   }
+
+  static String _xml(String value) => value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+
+  static int _dxfUnitCode(String unit) => switch (unit) {
+        'in' => 1,
+        'ft' => 2,
+        'mm' => 4,
+        'cm' => 5,
+        'm' => 6,
+        _ => 0,
+      };
 
   String exportCsv() {
     const columns = [

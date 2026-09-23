@@ -135,8 +135,44 @@ void main() {
     );
     expect(document.drawingObjectCount, 1);
     expect(document.exportSvg(), contains('id="p1rect1"'));
-    expect(document.exportSvg(), contains('Unitless'));
+    expect(document.exportSvg(), contains('data-units="normalized"'));
     expect(document.exportDxf(), contains('LWPOLYLINE'));
     expect(document.exportJson(), contains('normalized_page'));
+  });
+
+  test('smart CAD preserves traced points, labels, and reviewed scale', () {
+    const object = DrawingObject(
+      id: 'p1contour1',
+      kind: 'contour',
+      box: [0.1, 0.2, 0.5, 0.25],
+      points: [0.1, 0.2, 0.6, 0.2, 0.55, 0.45, 0.1, 0.45],
+      confidence: 0.5,
+      sourceLabels: ['2500 mm'],
+    );
+    final document = LegacyDocument(
+      name: 'plan.jpg',
+      documentType: 'drawing',
+      pages: [
+        LegacyPage(
+          number: 1,
+          image: Uint8List(0),
+          lines: const [],
+          pixelWidth: 1000,
+          pixelHeight: 500,
+          drawingObjects: const [object],
+        ),
+      ],
+      fields: const [],
+    );
+
+    document.calibrateCad(object: object, knownWidth: 2500, unit: 'mm');
+
+    expect(document.cadPageWidth, 5000);
+    expect(document.exportSvg(), contains('data-units="mm"'));
+    expect(document.exportSvg(), contains('2500 mm'));
+    expect(document.exportDxf(), contains(r'$INSUNITS'));
+    expect(document.exportDxf(), contains('CONTOUR_REVIEW'));
+    expect(document.exportDxf(), contains('SOURCE_LABELS'));
+    expect(document.exportJson(), contains('p1contour1'));
   });
 }

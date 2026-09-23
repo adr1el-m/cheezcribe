@@ -433,8 +433,10 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
       "enhancedImage": FlutterStandardTypedData(bytes: jpeg),
       "enhancementApplied": false,
       "originalMeanConfidence": ocrResult.meanConfidence,
+      "pixelWidth": cgImage.width,
+      "pixelHeight": cgImage.height,
       "lines": ocrResult.lines,
-      "drawingObjects": try detectRectangles(cgImage, page: pageNumber),
+      "drawingObjects": try detectDrawingGeometry(cgImage, page: pageNumber),
     ]
   }
 
@@ -501,23 +503,96 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
     return (lines, mean)
   }
 
-  private func detectRectangles(_ cgImage: CGImage, page: Int) throws -> [[String: Any]] {
-    let request = VNDetectRectanglesRequest()
-    request.maximumObservations = 80
-    request.minimumConfidence = 0.45
-    request.minimumAspectRatio = 0.05
-    request.minimumSize = 0.015
-    request.quadratureTolerance = 22
-    try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
-    return (request.results ?? []).enumerated().map { index, observation in
+  private func detectDrawingGeometry(_ cgImage: CGImage, page: Int) throws -> [[String: Any]] {
+    let rectangles = VNDetectRectanglesRequest()
+    rectangles.maximumObservations = 60
+    rectangles.minimumConfidence = 0.45
+    rectangles.minimumAspectRatio = 0.05
+    rectangles.minimumSize = 0.015
+    rectangles.quadratureTolerance = 22
+
+    let contours = VNDetectContoursRequest()
+    contours.contrastAdjustment = 1.15
+    contours.detectsDarkOnLight = true
+    contours.maximumImageDimension = 1024
+
+    try VNImageRequestHandler(cgImage: cgImage, options: [:])
+      .perform([rectangles, contours])
+
+    var output = (rectangles.results ?? []).enumerated().map { index, observation in
       let box = observation.boundingBox
+      let points = [observation.topLeft, observation.topRight,
+                    observation.bottomRight, observation.bottomLeft]
       return [
         "id": "p\(page)rect\(index + 1)",
-        "kind": "rectangle",
+        "kind": "quadrilateral",
         "box": [Double(box.minX), Double(1 - box.maxY), Double(box.width), Double(box.height)],
+        "points": points.flatMap { [Double($0.x), Double(1 - $0.y)] },
         "confidence": Double(observation.confidence),
-      ]
+        "closed": true,
+      ] as [String: Any]
     }
+
+    let rectangleBoxes = (rectangles.results ?? []).map(\.boundingBox)
+    var contourIndex = 0
+    for contour in contours.results?.first?.topLevelContours ?? [] {
+      let bounds = contour.normalizedPath.boundingBoxOfPath
+      let area = bounds.width * bounds.height
+      if area < 0.003 || area > 0.85 { continue }
+      if rectangleBoxes.contains(where: { intersectionOverUnion($0, bounds) > 0.78 }) { continue }
+
+      var rawPoints: [CGPoint] = []
+      contour.normalizedPath.applyWithBlock { pointer in
+        let element = pointer.pointee
+        switch element.type {
+        case .moveToPoint, .addLineToPoint:
+          rawPoints.append(element.points[0])
+        case .addQuadCurveToPoint:
+          rawPoints.append(element.points[1])
+        case .addCurveToPoint:
+          rawPoints.append(element.points[2])
+        case .closeSubpath:
+          break
+        @unknown default:
+          break
+        }
+      }
+      let reduced = simplify(rawPoints, maximum: 48)
+      if reduced.count < 3 { continue }
+      contourIndex += 1
+      let contourBox = [Double(bounds.minX), Double(1 - bounds.maxY),
+                        Double(bounds.width), Double(bounds.height)]
+      let contourPoints: [Double] = reduced.flatMap { point in
+        [Double(point.x), Double(1 - point.y)]
+      }
+      let item: [String: Any] = [
+        "id": "p\(page)contour\(contourIndex)",
+        "kind": "contour",
+        "box": contourBox,
+        "points": contourPoints,
+        "confidence": 0.5,
+        "closed": true,
+      ]
+      output.append(item)
+      if contourIndex >= 40 { break }
+    }
+    return output
+  }
+
+  private func simplify(_ points: [CGPoint], maximum: Int) -> [CGPoint] {
+    guard points.count > maximum else { return points }
+    let stride = max(1, Int(ceil(Double(points.count) / Double(maximum))))
+    return points.enumerated().compactMap { index, point in
+      index % stride == 0 ? point : nil
+    }
+  }
+
+  private func intersectionOverUnion(_ first: CGRect, _ second: CGRect) -> CGFloat {
+    let intersection = first.intersection(second)
+    if intersection.isNull { return 0 }
+    let overlap = intersection.width * intersection.height
+    let union = first.width * first.height + second.width * second.height - overlap
+    return union > 0 ? overlap / union : 0
   }
 }
 

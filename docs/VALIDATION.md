@@ -99,3 +99,18 @@ Vercel is not required for the chosen mobile practice architecture. If the team 
 - Platform copy now identifies Apple Vision on iOS and ML Kit on Android. Automated bulk acceptance and canned historical summaries were removed so unresolved or inferred values are not presented as human-verified facts.
 - Shell syntax, Git whitespace, local Markdown links, and common committed-secret patterns were checked. No failures remain in those checks.
 - Live Gemini inference, App Check attestation, physical-device testing, historical-source accuracy, public repository publication, and portal submission remain unverified external steps.
+
+## September 23 smart CAD upgrade
+
+- Replaced bounding-box-only iPhone geometry with Vision quadrilateral corner extraction plus filtered top-level contour tracing. Rectangle-like contour duplicates are suppressed and long paths are bounded to keep overlays and exports usable.
+- Added OCR dimension-evidence linking, polygon/contour overlays, reviewer scale calibration from one known object width, calibrated SVG view boxes, DXF `$INSUNITS`, separate review layers, and source-label text entities.
+- Static analysis passed with no issues. All eleven Flutter tests passed, including calibrated vector export coverage. A fresh iOS simulator build succeeded.
+- Both iPhone 18 Pro simulator integration tests passed. The bundled 1915 page produced 16 geometry objects, including at least one traced contour; every returned object had three or more vector vertices, source crops remained available, and the review screen opened successfully.
+- These checks establish editable AI-assisted vector reconstruction on one fixture. They do not establish complete line recovery, correct engineering semantics, calibrated accuracy on unseen drawings, or fitness for construction use.
+
+## September 23 iPhone visual cleanup
+
+- The app now launches in a fixed light theme with warm paper surfaces, charcoal text, muted archival green accents, solid borders, and no neon treatment or glass blur.
+- Primary navigation, scan/import/sample, AI, and CAD actions use local solid SVG assets. No emoji characters remain in the Flutter source or tests.
+- The AI badge says configured rather than active; a configured key still does not claim a verified Gemini response.
+- The final iPhone 18 Pro simulator render was inspected for clipping and label overflow. Static analysis passed, all eleven Flutter tests passed, and a fresh iOS simulator build succeeded.
