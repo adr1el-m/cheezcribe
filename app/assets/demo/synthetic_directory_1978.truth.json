@@ -1,0 +1,30 @@
+{
+  "synthetic": true,
+  "title": "PERSONNEL DIRECTORY 1978",
+  "records": [
+    {
+      "file_no": "0217",
+      "full_name": "Ramon Dela Cruz",
+      "location": "Manila",
+      "year": "1978"
+    },
+    {
+      "file_no": "0231",
+      "full_name": "Elena Santos",
+      "location": "Quezon City",
+      "year": "1978"
+    },
+    {
+      "file_no": "0246",
+      "full_name": "Luis Mercado",
+      "location": "Pasig",
+      "year": "1978"
+    },
+    {
+      "file_no": "0288",
+      "full_name": "Maria Reyes",
+      "location": "Makati",
+      "year": "1978"
+    }
+  ]
+}

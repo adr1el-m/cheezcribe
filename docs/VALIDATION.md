@@ -27,7 +27,7 @@ Prepared September 18, 2026 (Asia/Manila).
 - Initial `flutter doctor -v` snapshot before iPhone setup: Android SDK missing and Xcode/CocoaPods unavailable through the selected tools. The iPhone follow-up below supersedes the Xcode/CocoaPods findings. Android setup remains pending.
 - A practice Firebase Spark project and iOS app were registered on September 19; see `LIVE_AI_SETUP.md`. AI Logic activation, App Check registration and a real inference remain unverified.
 - Real AI inference, Android build/install, App Check attestation, latency, cost and final user value are not yet verified.
-- Assigned theme, team identity and exact submission deadline remain pending.
+- The assigned theme is now recorded for Team 08. Member identities and exact submission deadline remain pending.
 - No public repository, account registration, organizer message or portal submission has been performed.
 
 ## iPhone starter — September 18 follow-up
@@ -49,6 +49,19 @@ Prepared September 18, 2026 (Asia/Manila).
 - `flutter test --no-pub`: all four tests passed with loopback access; the sandbox alone blocks the test runner's local socket.
 - Standard `check-starter.sh` dependency refresh could not finish in the restricted network sandbox. These checks used existing resolved dependencies and did not refresh packages.
 - The practice Firebase project is registered, but there is still no verified model response or Android device test.
+
+## September 23 LegacyLens development
+
+- Team 08's theme, judging rubric and LegacyLens product brief were inspected. `LEGACYLENS_PLAN.md` maps each criterion to a specific build or demonstration check.
+- New iOS pipeline imports images or scanned PDFs of up to five pages with PDFKit, uses Apple Vision OCR, and returns line text, location, confidence and source crops. The build passed for iPhone simulator.
+- Flutter workspace, review queue, and JSON/CSV export code were added. `flutter analyze --no-pub` found no issues; eight Dart tests passed, including conflict routing, grouped records CSV and export provenance.
+- A synthetic personnel directory and ground truth were generated and visually checked. It is not a real historical source or evidence of production accuracy.
+- The current iPhone 18 Pro simulator build was installed and launched; its home screen was captured and visually checked in `docs/screenshots/legacylens-home.png`. Two native integration tests passed: the synthetic image traversed Apple Vision OCR with source crops, and the review screen opened with source evidence.
+- After the cloud interpretation switch was added, formatting, static analysis, all eight Flutter tests, both native integration tests, and a fresh iOS simulator build passed. The rebuilt app was installed and launched; the refreshed screenshot shows the switch off by default.
+- On that one synthetic directory, Apple Vision returned all 16 labeled record cells as exact OCR lines in order. This is a fixture check, not an accuracy estimate for real archives or for Gemini interpretation.
+- `flutter pub get` must run with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` on this host. Without it, generated iOS Swift package metadata omits Firebase packages and the native integration test cannot compile.
+- A live Gemini smoke attempt initialized Firebase, then the first request failed with App Check's `server-unreachable` category. The app preserved OCR review items. This does not establish whether the cause is network access, API enablement or debug token registration; the Firebase Console state needs checking. No live model response is verified.
+- Performance on real historical scans, Android/web import, durable storage, public repository and submission are unverified.
 
 ## Optional Vercel tooling
 

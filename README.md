@@ -1,26 +1,24 @@
-# AppCon 2026 • Flutter preparation workspace
+# LegacyLens • AppCon 2026 Team 08
 
-Status: preparation, not the final competition entry. Team 08's assigned challenge is **Legacy Knowledge Digitization & Asset Redefinition**. The product idea, team identity and submission cutoff are not yet supplied. A practice Firebase project exists, but live AI inference is not yet verified. No winning outcome is guaranteed.
+Status: Team 08's **LegacyLens** entry is in development for **Legacy Knowledge Digitization & Asset Redefinition**. The practice Firebase project exists, but live AI inference, Android/web import and public submission are not yet verified. No winning outcome is guaranteed.
 
-## Send the idea
+## Product and scorecard
 
-Send your idea in any form, even a rough paragraph. If known, include who has the problem, what paper documents or drawings they provide, the digital asset they need, and any sample source material or constraints. Missing details can be worked out during development. We will check it against [Team 08's challenge](docs/TEAM_08_CHALLENGE.md) before locking the entry.
+The team supplied the LegacyLens concept on September 23. See [the implementation and judging map](docs/LEGACYLENS_PLAN.md) and [the assigned challenge](docs/TEAM_08_CHALLENGE.md). The current P0 code lives in [`app/`](app/README.md). A permitted historical sample has not been supplied; the bundled directory is synthetic and labeled accordingly.
 
-The development path is: settle the one-sentence workflow and acceptance criteria; adapt the Flutter screens and AI task; connect and test a real Firebase response; verify the full phone workflow and failure states; evaluate representative cases; then prepare the public repository, setup guide, demo and pitch. Account access, the official theme and team facts still require information from the team.
-
-We are optimizing for a narrow, useful, genuinely AI-driven product with a dependable mobile demo. The official mechanics PDF is the source for the event requirements; our recommendations are identified separately.
+The app focuses on a reviewable document-to-asset workflow with a dependable iPhone demo. The official mechanics PDF is the source for event requirements; our recommendations are identified separately.
 
 ## Start here
 
 1. Read [the competition playbook](docs/PLAYBOOK.md).
 2. Complete [team readiness and the build schedule](docs/TEAM_AND_TIMELINE.md).
 3. Learn [how AI works in Flutter](docs/FLUTTER_AI.md).
-4. Use [Team 08's assigned challenge](docs/TEAM_08_CHALLENGE.md) and [the theme decision worksheet](docs/THEME_DECISION.md) to choose the product.
+4. Use [Team 08's assigned challenge](docs/TEAM_08_CHALLENGE.md) and [the LegacyLens plan](docs/LEGACYLENS_PLAN.md) to guide implementation.
 5. Rehearse [the pitch](docs/PITCH.md) and verify [submission readiness](docs/SUBMISSION.md).
 
-## Practice app
+## LegacyLens app
 
-The main runnable starting app is now [Matsuri Studio](app/README.md), with iOS, Android and browser targets, persistent local drafts and a Firebase AI adapter. To open it on iPhone 18 Pro:
+The current main app is [LegacyLens](app/README.md). To open it on the iPhone 18 Pro simulator:
 
 ```sh
 bash scripts/run-ios.sh
@@ -40,7 +38,7 @@ See `docs/FLUTTER_AI.md` for Firebase configuration, App Check registration and 
 
 ## Entry development
 
-Create the actual entry during the event, with genuine development commits. The PDF requires commit history showing hackathon progress, but does not explicitly settle whether reusable pre-event scaffolding is allowed. Ask organizers that specific question; preserve this preparation history and disclose anything reused. Do not backdate commits.
+Local Git history starts with a commit explicitly labeled as imported pre-event scaffolding. New LegacyLens work is being developed during the event. The PDF requires commit history showing hackathon progress, but does not explicitly settle whether reusable pre-event scaffolding is allowed. Ask organizers that specific question and disclose what was reused. Do not backdate commits.
 
 ## Licensing and attribution
 
@@ -48,8 +46,6 @@ This preparation workspace has an MIT license. Replace the generic copyright hol
 
 ## Verification boundaries
 
-`docs/VALIDATION.md` records what was checked and what still needs a real device, configuration or team input. Public repository publication, registration, portal submission and presentation upload have not been performed.
+`docs/VALIDATION.md` records what was checked and what still needs a real device, configuration or team input. Public repository publication, portal submission and presentation upload have not been performed.
 
-Local validation passed: Flutter 3.47.4 installed, dependencies resolved, analysis clean, setup-state widget test passing. Android SDK/device and Firebase configuration are still needed for a real native AI test.
-
-The new `app/` passes formatting, analysis and four workflow/storage tests. It builds and runs natively on the actual iPhone 18 Pro simulator with iOS 27.0. The rendered home screen was visually checked; see the validation record and `docs/screenshots/iphone18-pro-home.png`.
+The earlier starter checks and the current LegacyLens checks are recorded separately. Android SDK/device and live Firebase inference are still needed for a cross-platform, connected AI claim. The new iPhone home screen has been visually checked on the iPhone 18 Pro simulator.

@@ -4,8 +4,14 @@ import 'core/theme.dart';
 import 'screens/shell.dart';
 import 'services/ai_service.dart';
 import 'services/draft_store.dart';
+import 'legacy/legacy_app.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(LegacyLensApp(connection: FirebaseAiService()));
+}
+
+Future<void> runPreparationStarter() async {
   WidgetsFlutterBinding.ensureInitialized();
   final state =
       AppState(store: PreferenceDraftStore(), ai: FirebaseAiService());
