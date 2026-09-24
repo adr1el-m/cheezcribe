@@ -4,7 +4,28 @@ String _norm(String value) =>
     value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
 extension _ArchiveView on _PaperazziHomeState {
+  Widget _archiveTabs() => PzEngTabs(
+        tabs: const ['Search', 'Knowledge Fusion'],
+        index: archiveMode,
+        onChanged: (i) {
+          HapticFeedback.selectionClick();
+          _update(() => archiveMode = i);
+        },
+      );
+
   Widget _archiveView() {
+    if (archiveMode == 1) {
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 40),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        children: [
+          const PzTopBar(overline: 'Asset records', title: 'Archive'),
+          const SizedBox(height: 12),
+          _archiveTabs().padded(),
+          ..._fusionPanel(),
+        ],
+      );
+    }
     final q = archiveQuery.trim().toLowerCase();
     final doc = document;
     final fieldMatches = doc == null || q.isEmpty
@@ -29,6 +50,8 @@ extension _ArchiveView on _PaperazziHomeState {
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
         const PzTopBar(overline: 'Asset records', title: 'Archive'),
+        const SizedBox(height: 12),
+        _archiveTabs().padded(),
         Padding(
           padding: const EdgeInsets.fromLTRB(Pz.gutter, 18, Pz.gutter, 0),
           child: TextField(
@@ -105,8 +128,9 @@ extension _ArchiveView on _PaperazziHomeState {
         Padding(
           padding: const EdgeInsets.fromLTRB(Pz.gutter, 10, Pz.gutter, 0),
           child: Text(
-            '${history.length} of ${SessionCheckpointStore.maxEntries} checkpoints used · '
-            'Checkpoints hold structured results only; source files stay on this device.',
+            '${history.length} of ${SessionCheckpointStore.maxEntries} checkpoints · '
+            '$indexedCount documents in the knowledge index. Extracted text '
+            'stays on this device; source images are not stored.',
             style: Pz.meta.copyWith(fontSize: 11.5, color: Pz.muted),
           ),
         ),

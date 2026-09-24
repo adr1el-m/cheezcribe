@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../fusion/fusion_models.dart';
+import '../fusion/fusion_pipeline.dart';
+import '../fusion/knowledge_index.dart';
+import '../fusion/llm_client.dart';
 import '../services/ai_service.dart';
 import 'legacy_models.dart';
 import 'legacy_pipeline.dart';
@@ -19,6 +23,7 @@ part 'views/review_view.dart';
 part 'views/verify_view.dart';
 part 'views/drawing_view.dart';
 part 'views/export_view.dart';
+part 'views/fusion_view.dart';
 
 /// Brand mark from the app icon, used small and flat in headers.
 class PaperazziMark extends StatelessWidget {
@@ -88,6 +93,22 @@ class _PaperazziHomeState extends State<PaperazziHome> {
   String previewFormat = 'json';
   String archiveQuery = '';
   final archiveSearch = TextEditingController();
+  int archiveMode = 0;
+
+  // Knowledge Fusion. The OpenRouter key is session-only unless supplied at
+  // build time with --dart-define=OPENROUTER_API_KEY.
+  final knowledgeStore = FileKnowledgeStore();
+  final fusionLlm = OpenRouterClient(
+    apiKey: const String.fromEnvironment('OPENROUTER_API_KEY'),
+    model: const String.fromEnvironment('OPENROUTER_MODEL'),
+  );
+  late final fusionPipeline =
+      KnowledgeFusionPipeline(store: knowledgeStore, llm: fusionLlm);
+  final fusionInput = TextEditingController();
+  final fusionResults = <FusionOutcome>[];
+  FusionStage? fusionStage;
+  bool fusionBusy = false;
+  int indexedCount = 0;
   int persistedSessionCount = 0;
   List<SessionCheckpoint> history = const [];
 
@@ -111,11 +132,30 @@ class _PaperazziHomeState extends State<PaperazziHome> {
       if (mounted) setState(() => persistedSessionCount = value);
     });
     _reloadHistory();
+    _refreshIndexCount();
+  }
+
+  Future<void> _refreshIndexCount() async {
+    try {
+      final docs = await knowledgeStore.list();
+      if (mounted) setState(() => indexedCount = docs.length);
+    } catch (_) {}
+  }
+
+  /// Keeps the searchable text copy current. Source images are not stored.
+  Future<void> _indexDocument(LegacyDocument doc) async {
+    try {
+      await knowledgeStore.save(IndexedDocument.fromDocument(doc));
+      await _refreshIndexCount();
+    } catch (indexError) {
+      debugPrint('Paperazzi knowledge index skipped: $indexError');
+    }
   }
 
   @override
   void dispose() {
     archiveSearch.dispose();
+    fusionInput.dispose();
     super.dispose();
   }
 
@@ -171,6 +211,7 @@ class _PaperazziHomeState extends State<PaperazziHome> {
       });
       persistedSessionCount = await checkpointStore.save(result.document);
       await _reloadHistory();
+      unawaited(_indexDocument(result.document));
       HapticFeedback.mediumImpact();
     } on PlatformException catch (e) {
       if (mounted) {
@@ -363,6 +404,7 @@ class _PaperazziHomeState extends State<PaperazziHome> {
   }
 
   Future<void> _saveCheckpoint(LegacyDocument doc) async {
+    unawaited(_indexDocument(doc));
     try {
       final value = await checkpointStore.save(doc);
       final entries = await checkpointStore.list();

@@ -37,6 +37,12 @@ abstract final class Pz {
   static const overlayText = blue;
   static const overlayDrawing = Color(0xFF6B5FA6);
 
+  // Knowledge Fusion provenance
+  static const legacy = Color(0xFF7B6446);
+  static const current = blue;
+  static const synthesis = Color(0xFF6B5FA6);
+  static const conflict = error;
+
   // Geometry
   static const rCard = 10.0;
   static const rButton = 8.0;
