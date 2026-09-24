@@ -658,13 +658,16 @@ class _PaperazziHomeState extends State<PaperazziHome> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const PzLabel('Optional · Gemini', color: Pz.blue),
+                PzLabel(kIsWeb ? 'Cloud fallback' : 'Optional · Gemini',
+                    color: Pz.blue),
                 const SizedBox(height: 6),
-                const Text('Cloud extraction', style: Pz.sectionTitle),
+                Text(kIsWeb ? 'Resilient cloud extraction' : 'Cloud extraction',
+                    style: Pz.sectionTitle),
                 const SizedBox(height: 4),
                 Text(
-                    'Sends the page image and OCR lines to the configured Gemini '
-                    'model. Use only for sources you are permitted to share.',
+                    kIsWeb
+                        ? 'The website sends permitted OCR text to a server-side fallback chain. Provider keys never enter the browser.'
+                        : 'Sends the page image and OCR lines to the configured Gemini model. Use only for sources you are permitted to share.',
                     style: Pz.meta),
                 const SizedBox(height: 14),
                 PzPanel(
@@ -676,43 +679,51 @@ class _PaperazziHomeState extends State<PaperazziHome> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                TextField(
-                  controller: keyController,
-                  obscureText: true,
-                  style: Pz.value,
-                  decoration: InputDecoration(
-                    labelText: 'Gemini API key (this session only)',
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.content_paste_outlined,
-                          size: 18, color: Pz.blue),
-                      tooltip: 'Paste',
-                      onPressed: () async {
-                        final data = await Clipboard.getData('text/plain');
-                        if (data?.text != null) {
-                          keyController.text = data!.text!.trim();
-                          setModalState(() {});
-                        }
-                      },
+                if (kIsWeb)
+                  const PzNotice(
+                    'Server-managed credentials: Groq is tried first, then Gemini and Mistral. If all providers are unavailable, Paperazzi keeps the source and local review workflow usable.',
+                    color: Pz.blue,
+                    icon: Icons.shield_outlined,
+                  )
+                else ...[
+                  TextField(
+                    controller: keyController,
+                    obscureText: true,
+                    style: Pz.value,
+                    decoration: InputDecoration(
+                      labelText: 'Gemini API key (this session only)',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.content_paste_outlined,
+                            size: 18, color: Pz.blue),
+                        tooltip: 'Paste',
+                        onPressed: () async {
+                          final data = await Clipboard.getData('text/plain');
+                          if (data?.text != null) {
+                            keyController.text = data!.text!.trim();
+                            setModalState(() {});
+                          }
+                        },
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedModel,
-                  decoration: const InputDecoration(labelText: 'Model'),
-                  style: Pz.value,
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'gemini-2.5-flash',
-                        child: Text('Gemini 2.5 Flash · faster')),
-                    DropdownMenuItem(
-                        value: 'gemini-2.5-pro',
-                        child: Text('Gemini 2.5 Pro · higher quality')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setModalState(() => selectedModel = val);
-                  },
-                ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedModel,
+                    decoration: const InputDecoration(labelText: 'Model'),
+                    style: Pz.value,
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'gemini-2.5-flash',
+                          child: Text('Gemini 2.5 Flash · faster')),
+                      DropdownMenuItem(
+                          value: 'gemini-2.5-pro',
+                          child: Text('Gemini 2.5 Pro · higher quality')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedModel = val);
+                    },
+                  ),
+                ],
                 const SizedBox(height: 18),
                 Row(
                   children: [

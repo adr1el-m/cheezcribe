@@ -6,6 +6,7 @@ import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'cloud_proxy.dart';
 
 const firebaseEnabled =
     bool.fromEnvironment('FIREBASE_ENABLED', defaultValue: true);
@@ -89,6 +90,11 @@ class FirebaseAiService implements AiService {
 
   @override
   Future<void> connect() async {
+    if (kIsWeb) {
+      _ready = true;
+      _status = 'Secure cloud fallback ready • Groq → Gemini → Mistral';
+      return;
+    }
     // 1. Load saved preferences
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -149,6 +155,11 @@ class FirebaseAiService implements AiService {
 
   @override
   Future<void> setCustomApiKey(String key) async {
+    if (kIsWeb) {
+      _apiKey = '';
+      _status = 'Secure cloud fallback ready • keys stay on the server';
+      return;
+    }
     _apiKey = key.trim();
     if (_apiKey.isNotEmpty) {
       _ready = true;
@@ -174,6 +185,15 @@ class FirebaseAiService implements AiService {
   @override
   Future<int> pingConnection() async {
     final clock = Stopwatch()..start();
+    if (kIsWeb) {
+      final answer = await requestCloudFallback(
+        task: 'Return this strict JSON: {"document_type":"connection_test","fields":[]}',
+        input: 'Connection test.',
+      );
+      _ready = true;
+      _status = 'Active • ${answer.latencyMs}ms • ${answer.provider}';
+      return answer.latencyMs;
+    }
     if (_apiKey.isNotEmpty) {
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 12);
@@ -219,6 +239,12 @@ class FirebaseAiService implements AiService {
   @override
   Future<AiAnswer> generate(String task, String input) async {
     final clock = Stopwatch()..start();
+    if (kIsWeb) {
+      final answer = await requestCloudFallback(task: task, input: input);
+      _status = 'Active • ${answer.latencyMs}ms • ${answer.provider}';
+      return AiAnswer(answer.text, '${answer.provider} · ${answer.model}',
+          answer.latencyMs);
+    }
     if (_apiKey.isNotEmpty) {
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 20);
@@ -293,6 +319,15 @@ class FirebaseAiService implements AiService {
         'Prefer complete directory entries, person names, dates, addresses, IDs, tables, and form fields useful for export. '
         'Merge fragments that belong to the same visible record, avoid duplicate fields, and return at most 30 useful fields. '
         'Return strict JSON in this format: {"document_type": "...", "fields": [{"name": "...", "value": "...", "line_index": 0, "record_index": 0}]}';
+
+    if (kIsWeb) {
+      final answer = await requestCloudFallback(
+        task: '$prompt\nInterpret page $pageNumber.',
+        input: ocrText,
+      );
+      _status = 'Active • ${answer.latencyMs}ms • ${answer.provider}';
+      return answer.text;
+    }
 
     // Direct Gemini REST API
     if (_apiKey.isNotEmpty) {
