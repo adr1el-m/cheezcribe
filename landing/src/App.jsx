@@ -9,7 +9,7 @@ import exportScreen from '../screens/export.png';
 import finalPhone from '../assets/final-phone.png';
 
 const REPO_URL = 'https://github.com/adr1el-m/cheezcribe';
-const APP_URL = 'https://paperazzi-appcon.vercel.app';
+const APP_URL = 'https://paperazzi-web-app.vercel.app';
 
 const features = [
   {
