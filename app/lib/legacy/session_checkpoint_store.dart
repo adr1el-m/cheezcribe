@@ -76,6 +76,11 @@ class SessionCheckpointStore {
     }
   }
 
+  Future<void> clear() async {
+    final prefs = await _preferences();
+    await prefs.remove(_key);
+  }
+
   Future<int> save(LegacyDocument document) async {
     final prefs = await _preferences();
     final entries = prefs.getStringList(_key) ?? <String>[];

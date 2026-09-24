@@ -419,6 +419,16 @@ class _PaperazziHomeState extends State<PaperazziHome> {
     }
   }
 
+  Future<void> _clearArchive() async {
+    await checkpointStore.clear();
+    if (mounted) {
+      setState(() {
+        history = const [];
+        persistedSessionCount = 0;
+      });
+    }
+  }
+
   Future<void> _openHistory(SessionCheckpoint checkpoint) async {
     if (!checkpoint.canReopen || busy) return;
     setState(() {

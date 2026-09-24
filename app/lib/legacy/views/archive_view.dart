@@ -99,9 +99,45 @@ extension _ArchiveView on _PaperazziHomeState {
         const SizedBox(height: 26),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Pz.gutter),
-          child: PzSectionHeader(
-              q.isEmpty ? 'Saved archives' : 'Archive matches',
-              trailing: '${archives.length}'),
+          child: Row(
+            children: [
+              Expanded(
+                child: PzSectionHeader(
+                    q.isEmpty ? 'Saved archives' : 'Archive matches',
+                    trailing: '${archives.length}'),
+              ),
+              if (q.isEmpty && history.isNotEmpty)
+                GestureDetector(
+                  onTap: () async {
+                    HapticFeedback.mediumImpact();
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Clear all archives?'),
+                        content: const Text(
+                            'This will remove all saved checkpoints from this device. '
+                            'Exported files are not affected.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Clear',
+                                style: TextStyle(color: Pz.review)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) await _clearArchive();
+                  },
+                  child: Text('Clear all',
+                      style: Pz.meta.copyWith(
+                          fontSize: 12, color: Pz.review)),
+                ),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Pz.gutter),
