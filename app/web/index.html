@@ -60,6 +60,7 @@
     }
 
     .device-shell,
+    .device-screen,
     #flutter-host,
     flutter-view {
       width: 100%;
@@ -71,6 +72,7 @@
       background: #fff;
     }
 
+    .device-screen,
     #flutter-host {
       position: relative;
       overflow: hidden;
@@ -101,20 +103,18 @@
           inset 0 0 0 1px rgba(255, 255, 255, 0.2);
       }
 
-      .device-shell::before {
+      .device-screen {
         position: absolute;
-        z-index: 0;
+        z-index: 1;
         inset: 9px;
+        width: auto;
+        height: auto;
         border-radius: 49px;
-        background: #fff;
-        content: "";
       }
 
       #flutter-host {
-        z-index: 1;
         height: calc(100% - 60px);
         margin-top: 32px;
-        border-radius: 0;
       }
 
       .dynamic-island {
@@ -194,7 +194,9 @@
       <span class="device-button device-button--volume-up" aria-hidden="true"></span>
       <span class="device-button device-button--volume-down" aria-hidden="true"></span>
       <span class="device-button device-button--power" aria-hidden="true"></span>
-      <div id="flutter-host"></div>
+      <div class="device-screen">
+        <div id="flutter-host"></div>
+      </div>
     </div>
   </main>
   <script src="flutter_bootstrap.js" async></script>
