@@ -79,6 +79,7 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
         }
       case "exportFile": self.export(call.arguments, result)
       case "exportSummaryPdf": self.exportSummaryPdf(call.arguments, result)
+      case "deleteSavedSource": self.deleteSavedSource(call.arguments, result)
       default: result(FlutterMethodNotImplemented)
       }
     }
@@ -395,6 +396,54 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
     let destination = directory.appendingPathComponent("\(UUID().uuidString)_\(safeName)")
     try data.write(to: destination, options: .atomic)
     return destination
+  }
+
+  private func deleteSavedSource(_ arguments: Any?, _ result: @escaping FlutterResult) {
+    guard let path = arguments as? String else {
+      result(FlutterError(code: "history", message: "Saved document path missing", details: nil))
+      return
+    }
+    do {
+      let support = try FileManager.default.url(
+        for: .applicationSupportDirectory,
+        in: .userDomainMask,
+        appropriateFor: nil,
+        create: true)
+      let historyDirectory = support
+        .appendingPathComponent("PaperazziHistory", isDirectory: true)
+        .standardizedFileURL
+
+      // The stored sourcePath may have a stale container UUID from a previous
+      // app launch. Extract the filename and resolve it within the current
+      // PaperazziHistory directory instead of comparing full absolute paths.
+      let storedURL = URL(fileURLWithPath: path)
+      let filename = storedURL.lastPathComponent
+      let candidate: URL
+
+      let directCandidate = URL(fileURLWithPath: path).standardizedFileURL
+      if directCandidate.path.hasPrefix(historyDirectory.path + "/") {
+        candidate = directCandidate
+      } else if let match = try? FileManager.default
+          .contentsOfDirectory(at: historyDirectory, includingPropertiesForKeys: nil)
+          .first(where: { $0.lastPathComponent == filename }) {
+        candidate = match.standardizedFileURL
+      } else {
+        // File doesn't exist in history — nothing to delete, treat as success.
+        result(true)
+        return
+      }
+
+      guard candidate.path.hasPrefix(historyDirectory.path + "/") else {
+        result(FlutterError(code: "history", message: "Refusing to delete a file outside Paperazzi history", details: nil))
+        return
+      }
+      if FileManager.default.fileExists(atPath: candidate.path) {
+        try FileManager.default.removeItem(at: candidate)
+      }
+      result(true)
+    } catch {
+      result(FlutterError(code: "history", message: "Could not delete saved document", details: error.localizedDescription))
+    }
   }
 
   private func process(data: Data, name: String, isPdf: Bool) throws -> [String: Any] {
