@@ -80,6 +80,7 @@
     }
 
     .dynamic-island,
+    .device-status,
     .device-button {
       display: none;
     }
@@ -133,6 +134,61 @@
         transform: translateX(-50%);
       }
 
+      .device-status {
+        position: absolute;
+        z-index: 10;
+        inset: 9px 9px auto;
+        display: flex;
+        height: 40px;
+        box-sizing: border-box;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        color: #111827;
+        font: 700 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        pointer-events: none;
+      }
+
+      .device-status__indicators {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .device-status svg {
+        width: 15px;
+        height: 12px;
+        fill: currentColor;
+      }
+
+      .device-status__battery {
+        display: block;
+        width: 20px;
+        height: 10px;
+        box-sizing: border-box;
+        border: 1.5px solid currentColor;
+        border-radius: 3px;
+      }
+
+      .device-status__battery::after {
+        display: block;
+        width: 2px;
+        height: 4px;
+        margin: 2px -4px 0 auto;
+        border-radius: 0 1px 1px 0;
+        background: currentColor;
+        content: "";
+      }
+
+      .device-status__battery span {
+        display: block;
+        width: 13px;
+        height: 6px;
+        margin: 1px;
+        border-radius: 1px;
+        background: currentColor;
+      }
+
 
       .device-button {
         position: absolute;
@@ -177,6 +233,14 @@
   <main class="device-stage">
     <div class="device-shell" aria-label="Paperazzi mobile application">
       <span class="dynamic-island" aria-hidden="true"></span>
+      <div class="device-status" aria-hidden="true">
+        <span>9:41</span>
+        <span class="device-status__indicators">
+          <svg viewBox="0 0 15 12"><path d="M1 9h2v2H1zm4-3h2v5H5zm4-3h2v8H9zm4-3h2v11h-2z"/></svg>
+          <svg viewBox="0 0 16 12"><path d="M8 9.2 5.9 7.1a3 3 0 0 1 4.2 0zM3.7 4.9 2.3 3.5a8 8 0 0 1 11.4 0l-1.4 1.4a6 6 0 0 0-8.6 0zm2.1 2.1L4.4 5.6a5 5 0 0 1 7.2 0L10.2 7a3 3 0 0 0-4.4 0z"/></svg>
+          <span class="device-status__battery"><span></span></span>
+        </span>
+      </div>
       <span class="device-button device-button--mute" aria-hidden="true"></span>
       <span class="device-button device-button--volume-up" aria-hidden="true"></span>
       <span class="device-button device-button--volume-down" aria-hidden="true"></span>
