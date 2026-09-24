@@ -9,6 +9,7 @@ import exportScreen from '../screens/export.png';
 import finalPhone from '../assets/final-phone.png';
 
 const REPO_URL = 'https://github.com/adr1el-m/cheezcribe';
+const APP_URL = 'https://paperazzi-appcon.vercel.app';
 
 const features = [
   {
@@ -393,8 +394,11 @@ function FinalCta() {
       <div className="container final-card reveal reveal-scale">
         <div className="final-copy">
           <h2 id="final-title">Make history usable—without losing the source.</h2>
-          <p>Explore the Flutter app, architecture, validation boundaries, and setup guides in the repository.</p>
-          <PrimaryLink className="button button-light">Explore Paperazzi</PrimaryLink>
+          <p>Open Paperazzi and turn scanned records into traceable, reviewable data.</p>
+          <a className="button button-light" href={APP_URL} target="_blank" rel="noopener noreferrer">
+            Try the app
+            <Icon name="arrow" />
+          </a>
         </div>
         <img
           className="final-phone final-phone-art"
