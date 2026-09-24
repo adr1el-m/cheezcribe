@@ -99,10 +99,20 @@
           inset 0 0 0 1px rgba(255, 255, 255, 0.2);
       }
 
-      #flutter-host {
+      .device-shell::before {
+        position: absolute;
+        z-index: 0;
+        inset: 9px;
         border-radius: 49px;
-        box-sizing: border-box;
-        padding-top: 40px;
+        background: #fff;
+        content: "";
+      }
+
+      #flutter-host {
+        z-index: 1;
+        height: calc(100% - 32px);
+        margin-top: 32px;
+        border-radius: 0 0 49px 49px;
       }
 
       .dynamic-island {
