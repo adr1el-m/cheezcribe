@@ -97,6 +97,33 @@ void main() {
     expect(summaries.single.length, lessThan(1000));
   });
 
+  test('saved archive checkpoints can be deleted independently', () async {
+    SharedPreferences.setMockInitialValues({});
+    final first = LegacyDocument(
+      name: 'first.pdf',
+      documentType: 'drawing',
+      pages: [LegacyPage(number: 1, image: Uint8List(0), lines: lines)],
+      fields: const [],
+    );
+    final second = LegacyDocument(
+      name: 'second.pdf',
+      documentType: 'register',
+      pages: [LegacyPage(number: 1, image: Uint8List(0), lines: lines)],
+      fields: const [],
+    );
+    final store = SessionCheckpointStore();
+    await store.save(first);
+    await store.save(second);
+    final saved = await store.list();
+
+    expect(saved, hasLength(2));
+    expect(await store.delete(saved.first), 1);
+    expect((await store.list()).single.source, 'first.pdf');
+
+    await store.clear();
+    expect(await store.list(), isEmpty);
+  });
+
   test('review decisions change export values and preserve provenance', () {
     final field = validateSuggestion(
         id: '2',
@@ -227,6 +254,26 @@ void main() {
     expect(document.exportDxf(), contains('CONTOUR_REVIEW'));
     expect(document.exportDxf(), contains('SOURCE_LABELS'));
     expect(document.exportJson(), contains('p1contour1'));
+  });
+
+  test('Tagbilaran demo profile uses semantic engineering geometry', () {
+    final objects = preparedTagbilaranDrawingProfile();
+    final kinds = objects.map((object) => object.kind).toSet();
+
+    expect(objects.length, greaterThanOrEqualTo(15));
+    expect(
+        kinds,
+        containsAll([
+          'tank section',
+          'roof outer ring',
+          'radial roof support',
+          'supply pipe run',
+          'valve assembly',
+          'segmental section',
+        ]));
+    expect(kinds, isNot(contains('quadrilateral')));
+    expect(objects.every((object) => object.vertices.length >= 2), isTrue);
+    expect(objects.every((object) => object.confidence < 1), isTrue);
   });
 
   test('on-device intelligence structures gazetteer rows from OCR evidence',

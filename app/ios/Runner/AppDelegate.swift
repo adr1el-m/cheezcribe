@@ -44,17 +44,20 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
         }
         DispatchQueue.global(qos: .userInitiated).async {
           do {
-            let url = URL(fileURLWithPath: path)
-            let data = try Data(contentsOf: url)
-            let storedName = url.lastPathComponent
+            guard let resolvedURL = self.resolveHistoryFileURL(path: path),
+                  FileManager.default.fileExists(atPath: resolvedURL.path) else {
+              throw LegacyImportError("The saved document file could not be found.")
+            }
+            let data = try Data(contentsOf: resolvedURL)
+            let storedName = resolvedURL.lastPathComponent
             let displayName = storedName.firstIndex(of: "_").map {
               String(storedName[storedName.index(after: $0)...])
             } ?? storedName
             var output = try self.process(
               data: data,
               name: displayName,
-              isPdf: url.pathExtension.lowercased() == "pdf")
-            output["historyPath"] = path
+              isPdf: resolvedURL.pathExtension.lowercased() == "pdf")
+            output["historyPath"] = resolvedURL.path
             DispatchQueue.main.async { result(output) }
           } catch {
             DispatchQueue.main.async {
@@ -69,7 +72,7 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
         DispatchQueue.global(qos: .userInitiated).async {
           do {
             let output = try self.process(data: bytes.data,
-              name: "philippines_civil_works_1915.jpg", isPdf: false)
+              name: "PRINT_ME_tagbilaran_blueprint_1915.pdf", isPdf: true)
             DispatchQueue.main.async { result(output) }
           } catch {
             DispatchQueue.main.async {
@@ -384,7 +387,7 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
   // MARK: - Image & Vision OCR Processing
   private static let ciContext = CIContext(options: [.useSoftwareRenderer: false])
 
-  private func archiveSource(data: Data, name: String) throws -> URL {
+  private func historyDirectoryURL() throws -> URL {
     let support = try FileManager.default.url(
       for: .applicationSupportDirectory,
       in: .userDomainMask,
@@ -392,57 +395,75 @@ private final class LegacyDocumentBridge: NSObject, UIDocumentPickerDelegate, VN
       create: true)
     let directory = support.appendingPathComponent("PaperazziHistory", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    return directory.resolvingSymlinksInPath().standardizedFileURL
+  }
+
+  private func resolveHistoryFileURL(path: String) -> URL? {
+    guard let historyDir = try? historyDirectoryURL() else { return nil }
+    let rawURL = URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL
+    let historyDirPath = historyDir.path
+
+    if rawURL.path.hasPrefix(historyDirPath + "/") && FileManager.default.fileExists(atPath: rawURL.path) {
+      return rawURL
+    }
+
+    let filename = rawURL.lastPathComponent
+    let localCandidate = historyDir.appendingPathComponent(filename).resolvingSymlinksInPath().standardizedFileURL
+    if FileManager.default.fileExists(atPath: localCandidate.path) {
+      return localCandidate
+    }
+
+    if let files = try? FileManager.default.contentsOfDirectory(at: historyDir, includingPropertiesForKeys: nil) {
+      if let matched = files.first(where: {
+        let name = $0.lastPathComponent
+        return name == filename || name.hasSuffix("_\(filename)")
+      }) {
+        let matchedURL = matched.resolvingSymlinksInPath().standardizedFileURL
+        if matchedURL.path.hasPrefix(historyDirPath + "/") && FileManager.default.fileExists(atPath: matchedURL.path) {
+          return matchedURL
+        }
+      }
+    }
+
+    if FileManager.default.fileExists(atPath: rawURL.path) && rawURL.path.hasPrefix(historyDirPath + "/") {
+      return rawURL
+    }
+
+    return nil
+  }
+
+  private func archiveSource(data: Data, name: String) throws -> URL {
+    let directory = try historyDirectoryURL()
     let safeName = URL(fileURLWithPath: name).lastPathComponent
     let destination = directory.appendingPathComponent("\(UUID().uuidString)_\(safeName)")
     try data.write(to: destination, options: .atomic)
-    return destination
+    return destination.resolvingSymlinksInPath().standardizedFileURL
   }
 
   private func deleteSavedSource(_ arguments: Any?, _ result: @escaping FlutterResult) {
-    guard let path = arguments as? String else {
-      result(FlutterError(code: "history", message: "Saved document path missing", details: nil))
+    guard let path = arguments as? String, !path.isEmpty else {
+      result(true)
       return
     }
     do {
-      let support = try FileManager.default.url(
-        for: .applicationSupportDirectory,
-        in: .userDomainMask,
-        appropriateFor: nil,
-        create: true)
-      let historyDirectory = support
-        .appendingPathComponent("PaperazziHistory", isDirectory: true)
-        .standardizedFileURL
+      let historyDir = try historyDirectoryURL()
+      let historyDirPath = historyDir.path
 
-      // The stored sourcePath may have a stale container UUID from a previous
-      // app launch. Extract the filename and resolve it within the current
-      // PaperazziHistory directory instead of comparing full absolute paths.
-      let storedURL = URL(fileURLWithPath: path)
-      let filename = storedURL.lastPathComponent
-      let candidate: URL
-
-      let directCandidate = URL(fileURLWithPath: path).standardizedFileURL
-      if directCandidate.path.hasPrefix(historyDirectory.path + "/") {
-        candidate = directCandidate
-      } else if let match = try? FileManager.default
-          .contentsOfDirectory(at: historyDirectory, includingPropertiesForKeys: nil)
-          .first(where: { $0.lastPathComponent == filename }) {
-        candidate = match.standardizedFileURL
-      } else {
-        // File doesn't exist in history — nothing to delete, treat as success.
-        result(true)
-        return
+      if let targetURL = resolveHistoryFileURL(path: path) {
+        guard targetURL.path.hasPrefix(historyDirPath + "/") else {
+          // Safety guard: never delete any file outside PaperazziHistory
+          result(true)
+          return
+        }
+        if FileManager.default.fileExists(atPath: targetURL.path) {
+          try FileManager.default.removeItem(at: targetURL)
+        }
       }
-
-      guard candidate.path.hasPrefix(historyDirectory.path + "/") else {
-        result(FlutterError(code: "history", message: "Refusing to delete a file outside Paperazzi history", details: nil))
-        return
-      }
-      if FileManager.default.fileExists(atPath: candidate.path) {
-        try FileManager.default.removeItem(at: candidate)
-      }
+      // If the file is not in history or already removed, treat as success
       result(true)
     } catch {
-      result(FlutterError(code: "history", message: "Could not delete saved document", details: error.localizedDescription))
+      // Deleting a retained cache file should never block removing the archive
+      result(true)
     }
   }
 

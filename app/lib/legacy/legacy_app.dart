@@ -113,14 +113,16 @@ class _PaperazziHomeState extends State<PaperazziHome> {
   List<SessionCheckpoint> history = const [];
 
   bool get supportsImport =>
-      !kIsWeb &&
+      kIsWeb ||
       (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.android);
   bool get supportsCameraScan =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-  String get ocrEngineName => defaultTargetPlatform == TargetPlatform.android
-      ? 'ML Kit'
-      : 'Apple Vision';
+  String get ocrEngineName => kIsWeb
+      ? 'Browser demo'
+      : defaultTargetPlatform == TargetPlatform.android
+          ? 'ML Kit'
+          : 'Apple Vision';
 
   /// Part files call this instead of the protected [setState].
   void _update(VoidCallback fn) => setState(fn);
@@ -260,6 +262,10 @@ class _PaperazziHomeState extends State<PaperazziHome> {
     final current = document;
     if (current == null || busy) return;
     HapticFeedback.lightImpact();
+    if (kIsWeb) {
+      _toast('${format.toUpperCase()} preview is ready below. Copy it for the browser demo.');
+      return;
+    }
     try {
       await pipeline.export(current, format);
       if (mounted) {
@@ -274,6 +280,10 @@ class _PaperazziHomeState extends State<PaperazziHome> {
     final current = document;
     if (current == null || busy) return;
     HapticFeedback.lightImpact();
+    if (kIsWeb) {
+      _toast('Summary PDF export is available in the native iPhone app.');
+      return;
+    }
     try {
       await pipeline.exportSummaryPdf(current);
       if (mounted) _toast('Summary PDF prepared. Choose a save location.');
@@ -465,69 +475,149 @@ class _PaperazziHomeState extends State<PaperazziHome> {
     }
   }
 
-  Future<void> edit(LegacyField field) async {
-    HapticFeedback.lightImpact();
-    final value = await showModalBottomSheet<String>(
+  Future<void> _deleteHistory(SessionCheckpoint checkpoint) async {
+    HapticFeedback.mediumImpact();
+    final confirmed = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => _ControllerScope(
-        initialText: _displayValue(field) ?? '',
-        builder: (controller) => Padding(
-          padding: EdgeInsets.fromLTRB(Pz.gutter, 20, Pz.gutter,
-              MediaQuery.viewInsetsOf(sheetContext).bottom + 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const PzLabel('Revision', color: Pz.blue),
-              const SizedBox(height: 6),
-              Text(_fieldLabel(field.name), style: Pz.sectionTitle),
-              const SizedBox(height: 14),
-              if (field.ocrValue != null) ...[
-                PzDataRow(label: 'Source (OCR)', value: field.ocrValue!),
-                const SizedBox(height: 12),
-              ],
-              TextField(
-                controller: controller,
-                autofocus: true,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (value) =>
-                    Navigator.pop(sheetContext, value.trim()),
-                style: Pz.value.copyWith(fontSize: 16),
-                decoration: const InputDecoration(labelText: 'Verified value'),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: PzSecondaryButton(
-                      label: 'Cancel',
-                      onPressed: () => Navigator.pop(sheetContext),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: PzPrimaryButton(
-                      label: 'Save revision',
-                      height: 44,
-                      onPressed: () =>
-                          Navigator.pop(sheetContext, controller.text.trim()),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete saved archive?'),
+        content: Text(
+          '${_title(checkpoint.source)} will be removed from Archive. '
+          'Its retained local source copy will also be deleted from this device.',
+          style: Pz.body,
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Pz.error),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete archive'),
+          ),
+        ],
       ),
     );
-    if (value != null && value.isNotEmpty && mounted) {
-      decide(field, FieldStatus.edited, value, autoAdvance: false);
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await pipeline.deleteSavedSource(checkpoint.sourcePath);
+    } catch (_) {
+      // Best-effort cleanup of retained local source file
+    }
+
+    try {
+      final count = await checkpointStore.delete(checkpoint);
+      final entries = await checkpointStore.list();
+      if (!mounted) return;
+      final deletingOpenDocument =
+          document?.sourcePath == checkpoint.sourcePath ||
+              (document?.name == checkpoint.source &&
+                  checkpoint.sourcePath == null);
       setState(() {
+        persistedSessionCount = count;
+        history = entries;
+        error = null;
+        if (deletingOpenDocument) {
+          document = null;
+          selectedId = null;
+          justImported = false;
+          note = null;
+        }
+      });
+      _toast('Archive deleted from this device.');
+    } catch (deleteError) {
+      if (mounted) {
+        setState(() => error = 'Could not delete the saved archive.');
+      }
+    }
+  }
+
+  Future<void> edit(LegacyField field) async {
+    HapticFeedback.lightImpact();
+    final value = await showDialog<String>(
+      context: context,
+      useRootNavigator: true,
+      builder: (dialogContext) => _ControllerScope(
+        initialText: _displayValue(field) ?? '',
+        builder: (controller) {
+          String? validationError;
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              void save() {
+                final edited = controller.text.trim();
+                if (edited.isEmpty) {
+                  setDialogState(
+                      () => validationError = 'Enter a verified value.');
+                  return;
+                }
+                Navigator.of(dialogContext).pop(edited);
+              }
+
+              return AlertDialog(
+                title: const Text('Edit verified value'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      PzLabel(_fieldLabel(field.name), color: Pz.blue),
+                      if (field.ocrValue != null) ...[
+                        const SizedBox(height: 12),
+                        Text('Source OCR', style: Pz.meta),
+                        const SizedBox(height: 3),
+                        Text(field.ocrValue!, style: Pz.value),
+                      ],
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: controller,
+                        autofocus: true,
+                        minLines: 1,
+                        maxLines: 4,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => save(),
+                        onChanged: (_) {
+                          if (validationError != null) {
+                            setDialogState(() => validationError = null);
+                          }
+                        },
+                        style: Pz.value.copyWith(fontSize: 16),
+                        decoration: InputDecoration(
+                          labelText: 'Verified value',
+                          errorText: validationError,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: save,
+                    icon: const Icon(Icons.save_outlined, size: 18),
+                    label: const Text('Save revision'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+    final doc = document;
+    if (value != null && value.isNotEmpty && mounted && doc != null) {
+      setState(() {
+        doc.decide(field.id, FieldStatus.edited, value);
         reviewOnlyPending = false;
         selectedId = field.id;
       });
-      _toast('Revision saved.');
+      await _saveCheckpoint(doc);
+      if (!mounted) return;
+      _toast('Revision saved and added to the audit trail.');
     }
   }
 

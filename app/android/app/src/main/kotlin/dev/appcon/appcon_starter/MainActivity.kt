@@ -22,6 +22,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.security.MessageDigest
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -47,10 +48,22 @@ class MainActivity : FlutterActivity() {
                     "recognizeSample" -> {
                         val bytes = call.arguments as? ByteArray
                         if (bytes == null) result.error("sample", "Demo sample unavailable", null)
-                        else processAsync(bytes, "synthetic_directory_1978.jpg", false, result)
+                        else processAsync(bytes, "PRINT_ME_tagbilaran_blueprint_1915.pdf", true, result)
                     }
                     "exportFile" -> export(call, result)
                     "exportSummaryPdf" -> exportSummaryPdf(call, result)
+                    "deleteSavedSource" -> {
+                        val path = call.arguments as? String
+                        if (path != null) {
+                            try {
+                                val file = java.io.File(path)
+                                if (file.exists()) {
+                                    file.delete()
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        result.success(true)
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -344,7 +357,14 @@ class MainActivity : FlutterActivity() {
             try { pages.add(recognize(bitmap, 1)) }
             finally { bitmap.recycle() }
         }
-        return mapOf("name" to name, "pages" to pages)
+        val fingerprint = MessageDigest.getInstance("SHA-256")
+            .digest(bytes)
+            .joinToString("") { "%02x".format(it) }
+        return mapOf(
+            "name" to name,
+            "pages" to pages,
+            "sourceFingerprint" to fingerprint
+        )
     }
 
     private fun recognize(bitmap: Bitmap, number: Int): Map<String, Any> {

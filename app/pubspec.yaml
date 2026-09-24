@@ -23,6 +23,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/demo/synthetic_directory_1978.jpg
+    - assets/demo/PRINT_ME_tagbilaran_blueprint_1915.pdf
+    - assets/demo/tagbilaran_blueprint_web.jpg
     - assets/icons/
   config:
     enable-swift-package-manager: true

@@ -114,4 +114,17 @@ class SessionCheckpointStore {
     await prefs.setStringList(_key, entries);
     return entries.length;
   }
+
+  Future<int> delete(SessionCheckpoint checkpoint) async {
+    final prefs = await _preferences();
+    final entries = prefs.getStringList(_key) ?? <String>[];
+    entries.removeWhere((entry) {
+      final parsed = tryParse(entry);
+      return parsed != null &&
+          parsed.source == checkpoint.source &&
+          parsed.savedAt == checkpoint.savedAt;
+    });
+    await prefs.setStringList(_key, entries);
+    return entries.length;
+  }
 }

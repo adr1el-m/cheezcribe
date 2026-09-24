@@ -61,8 +61,24 @@ class OcrOverlayPainter extends CustomPainter {
 }
 
 /// Engineering callout label for a detected drawing object.
-String drawingObjectTag(DrawingObject object, int index) =>
-    'OBJ-${(index + 1).toString().padLeft(2, '0')}';
+String drawingObjectTag(DrawingObject object, int index) {
+  final code = switch (object.kind) {
+    'tank section' => 'TANK-SEC',
+    'foundation slab' => 'SLAB',
+    'central riser' => 'RISER',
+    'roof outer ring' => 'ROOF-OUT',
+    'roof inner ring' => 'ROOF-IN',
+    'roof center hub' => 'HUB',
+    'radial roof support' =>
+      'RAD-${(index - 5).clamp(1, 99).toString().padLeft(2, '0')}',
+    'supply pipe run' => 'SUPPLY',
+    'waste pipe run' => 'WASTE',
+    'valve assembly' => 'VALVE',
+    'segmental section' => 'SEG-SEC',
+    _ => 'OBJ-${(index + 1).toString().padLeft(2, '0')}',
+  };
+  return code;
+}
 
 /// Detected drawing geometry over the scan: thin boxes, traced outline, and
 /// callout tags joined by leader lines.

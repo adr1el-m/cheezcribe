@@ -1,5 +1,11 @@
 part of '../legacy_app.dart';
 
+String _drawingKindLabel(String value) => value
+    .split(RegExp(r'[ _-]+'))
+    .where((part) => part.isNotEmpty)
+    .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+    .join(' ');
+
 extension _DrawingView on _PaperazziHomeState {
   List<Widget> _drawing(LegacyDocument doc) {
     final drawingPages =
@@ -264,7 +270,7 @@ extension _DrawingView on _PaperazziHomeState {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${o.kind[0].toUpperCase()}${o.kind.substring(1)}'
+                    '${_drawingKindLabel(o.kind)}'
                     '${o.closed ? '' : ' · open path'}'
                     '${reference ? ' · scale reference' : ''}',
                     style: Pz.cardTitle.copyWith(fontSize: 14),

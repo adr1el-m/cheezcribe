@@ -344,7 +344,7 @@ extension _ScanView on _PaperazziHomeState {
           ),
         ),
         const SizedBox(width: 24),
-        side(Icons.description_outlined, 'Sample',
+        side(Icons.description_outlined, 'Demo file',
             canImport ? () => import(sample: true) : null),
       ],
     );

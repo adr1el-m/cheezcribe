@@ -96,6 +96,19 @@ extension _HomeView on _PaperazziHomeState {
                 icon: Icons.upload_file_outlined,
                 onPressed: supportsImport && !busy ? () => import() : null,
               ),
+              const SizedBox(height: 6),
+              TextButton.icon(
+                onPressed: supportsImport && !busy
+                    ? () => import(sample: true)
+                    : null,
+                icon: const Icon(Icons.bolt_outlined, size: 18),
+                label: const Text('Load Tagbilaran 1915 demo file'),
+              ),
+              if (kIsWeb)
+                const PzNotice(
+                  'Browser demo: opens the prepared Tagbilaran analysis. Use the iPhone app for native OCR and camera scanning.',
+                  color: Pz.blue,
+                ),
               if (!supportsImport)
                 const PzNotice(
                     'Native OCR runs on iOS and Android. Run on a phone or simulator to import a document.',
@@ -182,11 +195,22 @@ extension _HomeView on _PaperazziHomeState {
       thumb: PzDocThumb(
           image: isOpen ? document!.pages.first.image : null,
           layers: entry.pageCount > 1 ? 2 : 1),
-      trailing: entry.needsReview > 0
-          ? const PzStatusBadge(PzStatus.review, dense: true)
-          : entry.fieldCount > 0
-              ? const PzStatusBadge(PzStatus.verified, dense: true)
-              : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (entry.needsReview > 0)
+            const PzStatusBadge(PzStatus.review, dense: true)
+          else if (entry.fieldCount > 0)
+            const PzStatusBadge(PzStatus.verified, dense: true),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: 'Delete archive',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.delete_outline, size: 19, color: Pz.error),
+            onPressed: busy ? null : () => _deleteHistory(entry),
+          ),
+        ],
+      ),
       onTap: isOpen
           ? () => _go(_Tab.review, view: _ReviewView.document)
           : entry.canReopen && !busy
