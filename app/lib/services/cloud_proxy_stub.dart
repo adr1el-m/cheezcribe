@@ -18,3 +18,10 @@ Future<CloudProxyAnswer> requestCloudFallback({
 }) {
   throw UnsupportedError('Cloud fallback is only used by the web app.');
 }
+
+Future<CloudProxyAnswer> requestCloudVision({
+  required String task,
+  required List<int> imageBytes,
+}) {
+  throw UnsupportedError('Cloud vision is only used by the web app.');
+}

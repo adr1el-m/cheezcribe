@@ -79,11 +79,13 @@ extension _HomeView on _PaperazziHomeState {
               PzPrimaryButton(
                 label: 'Scan Document',
                 icon: Icons.document_scanner_outlined,
-                onPressed: supportsImport ? () => _go(_Tab.scan) : null,
+                onPressed: supportsImport && !busy
+                    ? () => import(camera: supportsCameraScan)
+                    : null,
               ),
               const SizedBox(height: 10),
               PzSecondaryButton(
-                label: 'Import image or PDF',
+                label: kIsWeb ? 'Import image' : 'Import image or PDF',
                 icon: Icons.upload_file_outlined,
                 onPressed: supportsImport && !busy ? () => import() : null,
               ),
@@ -97,7 +99,7 @@ extension _HomeView on _PaperazziHomeState {
               ),
               if (kIsWeb)
                 const PzNotice(
-                  'Browser demo: opens the prepared Tagbilaran analysis. Use the iPhone app for native OCR and camera scanning.',
+                  'Use Scan Document to capture a real page with this device camera. Demo file is optional.',
                   color: Pz.blue,
                 ),
               if (!supportsImport)

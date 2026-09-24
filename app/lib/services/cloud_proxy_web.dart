@@ -44,3 +44,35 @@ Future<CloudProxyAnswer> requestCloudFallback({
     latencyMs: clock.elapsedMilliseconds,
   );
 }
+
+Future<CloudProxyAnswer> requestCloudVision({
+  required String task,
+  required List<int> imageBytes,
+}) async {
+  final clock = Stopwatch()..start();
+  final request = await html.HttpRequest.request(
+    '/api/analyze',
+    method: 'POST',
+    sendData: jsonEncode({
+      'task': task,
+      'imageBase64': base64Encode(imageBytes),
+      'mimeType': 'image/jpeg',
+    }),
+    requestHeaders: const {'Content-Type': 'application/json'},
+  ).timeout(const Duration(seconds: 42));
+  if (request.status != 200) {
+    throw StateError('Cloud vision is unavailable. Try again with a brighter, closer photo.');
+  }
+  final response = jsonDecode(request.responseText ?? '') as Map<String, dynamic>;
+  final text = response['text'];
+  if (text is! String || text.trim().isEmpty) {
+    throw StateError('Cloud vision returned no usable result.');
+  }
+  clock.stop();
+  return CloudProxyAnswer(
+    text: text,
+    provider: response['provider'] as String? ?? 'Cloud vision',
+    model: response['model'] as String? ?? 'configured model',
+    latencyMs: clock.elapsedMilliseconds,
+  );
+}

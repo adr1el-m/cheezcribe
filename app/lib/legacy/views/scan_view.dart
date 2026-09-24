@@ -83,9 +83,9 @@ extension _ScanView on _PaperazziHomeState {
   Widget _viewfinder(LegacyDocument? result) {
     final page = result?.pages.first;
     final tags = [
-      supportsCameraScan ? 'Auto crop' : 'File import',
-      supportsCameraScan ? 'Perspective corrected' : 'PDF · image',
-      'On-device OCR',
+      supportsCameraScan ? 'Live camera' : 'File import',
+      supportsCameraScan ? 'Captured source' : 'Image',
+      kIsWeb ? 'Secure vision' : 'On-device OCR',
     ];
     return AspectRatio(
       aspectRatio: 1.12,
@@ -124,7 +124,7 @@ extension _ScanView on _PaperazziHomeState {
                             busy
                                 ? (stage.isEmpty ? 'Processing' : stage)
                                 : supportsCameraScan
-                                    ? 'Place the page on a flat, even surface.\nThe scanner detects edges and corrects perspective.'
+                                    ? 'Place the page on a flat, even surface.\nCapture uses this device camera and keeps the original photo.'
                                     : 'Import a scanned image or PDF.\nUp to 100 pages per batch.',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
@@ -232,7 +232,9 @@ extension _ScanView on _PaperazziHomeState {
                     ? 'Enhanced on $enhanced of ${r.pages.length} page${r.pages.length == 1 ? '' : 's'}'
                     : 'Original retained'
                 : supportsCameraScan
-                    ? 'Enhanced pass compared'
+                    ? kIsWeb
+                        ? 'Original capture retained'
+                        : 'Enhanced pass compared'
                     : 'Not used on this platform',
           ),
           PzScannerStatusRow(
@@ -241,7 +243,9 @@ extension _ScanView on _PaperazziHomeState {
             value: r != null
                 ? '${r.fields.length} fields · ${r.documentType}'
                 : cloud
-                    ? 'Gemini, pages 1–8'
+                    ? kIsWeb
+                        ? 'Secure vision analysis'
+                        : 'Gemini, pages 1–8'
                     : 'On-device structuring',
           ),
           PzScannerStatusRow(
@@ -305,7 +309,7 @@ extension _ScanView on _PaperazziHomeState {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        side(Icons.upload_file_outlined, 'Import',
+        side(Icons.upload_file_outlined, kIsWeb ? 'Import image' : 'Import',
             canImport ? () => import() : null),
         const SizedBox(width: 24),
         Semantics(

@@ -25,16 +25,24 @@ class LegacyPipeline {
       {bool sample = false,
       bool camera = false,
       bool useAi = true,
+      Uint8List? capturedImage,
+      String? capturedName,
       String? savedPath,
       void Function(String)? onStage,
       void Function(Object)? onAiError}) async {
-    onStage?.call(kIsWeb
+    onStage?.call(kIsWeb && capturedImage != null
+        ? 'Reading the captured document with secure vision'
+        : kIsWeb
         ? 'Loading the interactive Tagbilaran document demo'
         : camera
         ? 'Scanning paper with camera'
         : 'Importing pages and running on-device OCR');
     final Map<String, dynamic>? raw = kIsWeb
-        ? await _webTagbilaranDemoPacket()
+        ? capturedImage != null
+            ? _webCapturedImagePacket(capturedImage, capturedName)
+            : sample
+                ? await _webTagbilaranDemoPacket()
+                : throw StateError('Choose camera capture or image import in the browser.')
         : savedPath != null
         ? await _channel.invokeMapMethod<String, dynamic>(
             'recognizeSaved', savedPath)
@@ -325,6 +333,27 @@ class LegacyPipeline {
           'pixelWidth': 1200,
           'pixelHeight': 1600,
           'lines': lines,
+          'drawingObjects': const <Map<String, dynamic>>[],
+        }
+      ],
+    };
+  }
+
+  Map<String, dynamic> _webCapturedImagePacket(Uint8List image, String? name) {
+    return {
+      'name': name?.trim().isNotEmpty == true ? name : 'Captured document.jpg',
+      'sourceFingerprint': 'web-camera-${DateTime.now().microsecondsSinceEpoch}',
+      'historyPath': null,
+      'pages': [
+        {
+          'number': 1,
+          'image': image,
+          'enhancedImage': null,
+          'enhancementApplied': false,
+          'originalMeanConfidence': 0.0,
+          'pixelWidth': 1200,
+          'pixelHeight': 1600,
+          'lines': const <Map<String, dynamic>>[],
           'drawingObjects': const <Map<String, dynamic>>[],
         }
       ],

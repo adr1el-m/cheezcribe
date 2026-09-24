@@ -12,6 +12,7 @@ import '../services/ai_service.dart';
 import 'legacy_models.dart';
 import 'legacy_pipeline.dart';
 import 'session_checkpoint_store.dart';
+import 'web_document_capture.dart';
 import 'ui/pz_components.dart';
 import 'ui/pz_painters.dart';
 import 'ui/pz_tokens.dart';
@@ -78,7 +79,7 @@ class _PaperazziHomeState extends State<PaperazziHome> {
   String stage = '';
   bool busy = false;
   bool justImported = false;
-  bool allowCloudAi = false;
+  bool allowCloudAi = kIsWeb;
   _Tab tab = _Tab.home;
   _ReviewView reviewView = _ReviewView.document;
   int pageIndex = 0;
@@ -117,7 +118,7 @@ class _PaperazziHomeState extends State<PaperazziHome> {
       (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.android);
   bool get supportsCameraScan =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+      kIsWeb || defaultTargetPlatform == TargetPlatform.iOS;
   String get ocrEngineName => kIsWeb
       ? 'Browser demo'
       : defaultTargetPlatform == TargetPlatform.android
@@ -192,9 +193,16 @@ class _PaperazziHomeState extends State<PaperazziHome> {
       tab = _Tab.scan;
     });
     try {
+      WebCapturedDocument? captured;
+      if (kIsWeb && !sample) {
+        captured = camera ? await captureWebDocument() : await pickWebDocument();
+        if (captured == null) return;
+      }
       final result = await pipeline.importAndProcess(
           sample: sample,
           camera: camera,
+          capturedImage: captured?.bytes,
+          capturedName: captured?.name,
           useAi: allowCloudAi,
           onStage: (value) {
             if (mounted) setState(() => stage = value);

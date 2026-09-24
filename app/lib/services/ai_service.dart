@@ -321,9 +321,9 @@ class FirebaseAiService implements AiService {
         'Return strict JSON in this format: {"document_type": "...", "fields": [{"name": "...", "value": "...", "line_index": 0, "record_index": 0}]}';
 
     if (kIsWeb) {
-      final answer = await requestCloudFallback(
+      final answer = await requestCloudVision(
         task: '$prompt\nInterpret page $pageNumber.',
-        input: ocrText,
+        imageBytes: imageBytes,
       );
       _status = 'Active • ${answer.latencyMs}ms • ${answer.provider}';
       return answer.text;
