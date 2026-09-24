@@ -36,15 +36,6 @@ extension _HomeView on _PaperazziHomeState {
                       fontWeight: FontWeight.w700,
                       letterSpacing: -.3,
                       color: Pz.navy)),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Pz.lineStrong),
-                  borderRadius: BorderRadius.circular(Pz.rChip - 2),
-                ),
-                child: const PzLabel('Plant archive', size: 9.5),
-              ),
               const Spacer(),
               PzIconButton(
                 icon: Icons.tune,
