@@ -84,9 +84,9 @@ async function tryGroq(task, input, imageBase64, mimeType) {
   if (!process.env.GROQ_API_KEY) return null;
   const models = [...new Set([
     imageBase64
-      ? process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct'
+      ? process.env.GROQ_VISION_MODEL || 'qwen/qwen3.8-27b'
       : process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
-    imageBase64 ? 'meta-llama/llama-4-maverick-17b-128e-instruct' : 'openai/gpt-oss-20b',
+    imageBase64 ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'openai/gpt-oss-20b',
   ])];
   let lastError;
   for (const model of models) {
