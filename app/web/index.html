@@ -80,7 +80,6 @@
     }
 
     .dynamic-island,
-    .home-indicator,
     .device-button {
       display: none;
     }
@@ -113,7 +112,7 @@
       }
 
       #flutter-host {
-        height: calc(100% - 60px);
+        height: calc(100% - 32px);
         margin-top: 32px;
       }
 
@@ -132,19 +131,6 @@
         transform: translateX(-50%);
       }
 
-      .home-indicator {
-        position: absolute;
-        z-index: 20;
-        bottom: 17px;
-        left: 50%;
-        display: block;
-        width: 112px;
-        height: 5px;
-        border-radius: 999px;
-        background: rgba(5, 5, 6, 0.78);
-        pointer-events: none;
-        transform: translateX(-50%);
-      }
 
       .device-button {
         position: absolute;
@@ -189,7 +175,6 @@
   <main class="device-stage">
     <div class="device-shell" aria-label="Paperazzi mobile application">
       <span class="dynamic-island" aria-hidden="true"></span>
-      <span class="home-indicator" aria-hidden="true"></span>
       <span class="device-button device-button--mute" aria-hidden="true"></span>
       <span class="device-button device-button--volume-up" aria-hidden="true"></span>
       <span class="device-button device-button--volume-down" aria-hidden="true"></span>
