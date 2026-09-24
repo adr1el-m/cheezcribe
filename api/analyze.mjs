@@ -73,51 +73,73 @@ function messages(task, input) {
 
 async function tryGroq(task, input) {
   if (!process.env.GROQ_API_KEY) return null;
-  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
-  const response = await postJson(
-    'https://api.groq.com/openai/v1/chat/completions',
-    { name: 'Groq', headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` } },
-    { model, messages: messages(task, input), temperature: 0.1, max_tokens: 1800, response_format: { type: 'json_object' } },
-  );
-  return { provider: 'Groq', model, text: asJsonText(response?.choices?.[0]?.message?.content) };
+  const models = [...new Set([
+    process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+    'openai/gpt-oss-20b',
+  ])];
+  let lastError;
+  for (const model of models) {
+    try {
+      const response = await postJson(
+        'https://api.groq.com/openai/v1/chat/completions',
+        { name: 'Groq', headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` } },
+        { model, messages: messages(task, input), temperature: 0.1, max_tokens: 1800, response_format: { type: 'json_object' } },
+      );
+      return { provider: 'Groq', model, text: asJsonText(response?.choices?.[0]?.message?.content) };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 async function tryGemini(task, input) {
   if (!process.env.GEMINI_API_KEY) return null;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
+  const models = [...new Set([
+    process.env.GEMINI_MODEL || 'gemini-2.5-pro',
+    'gemini-3.8-flash',
+  ])];
   const options = {
     name: 'Gemini',
     headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY },
   };
   const source = `${task}\n\nOCR/source text:\n${input}`;
-  try {
-    const response = await postJson(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      options,
-      {
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: [{ text: source }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 1800 },
-      },
-    );
-    const text = response?.candidates?.[0]?.content?.parts
-        ?.map((part) => part.text || '')
-        .join('');
-    return { provider: 'Gemini', model, text: asJsonText(text) };
-  } catch (_) {
-    const response = await postJson(
-      'https://generativelanguage.googleapis.com/v1beta/interactions',
-      options,
-      {
-        model,
-        system_instruction: systemPrompt,
-        input: source,
-        generation_config: { temperature: 0.1, max_output_tokens: 1800 },
-      },
-    );
-    const text = response?.output_text ?? response?.outputText;
-    return { provider: 'Gemini', model, text: asJsonText(text) };
+  let lastError;
+  for (const model of models) {
+    try {
+      const response = await postJson(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        options,
+        {
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ parts: [{ text: source }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 1800 },
+        },
+      );
+      const text = response?.candidates?.[0]?.content?.parts
+          ?.map((part) => part.text || '')
+          .join('');
+      return { provider: 'Gemini', model, text: asJsonText(text) };
+    } catch (_) {
+      try {
+        const response = await postJson(
+          'https://generativelanguage.googleapis.com/v1beta/interactions',
+          options,
+          {
+            model,
+            system_instruction: systemPrompt,
+            input: source,
+            generation_config: { temperature: 0.1, max_output_tokens: 1800 },
+          },
+        );
+        const text = response?.output_text ?? response?.outputText;
+        return { provider: 'Gemini', model, text: asJsonText(text) };
+      } catch (error) {
+        lastError = error;
+      }
+    }
   }
+  throw lastError;
 }
 
 async function tryMistral(task, input) {
