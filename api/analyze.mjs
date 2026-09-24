@@ -85,19 +85,39 @@ async function tryGroq(task, input) {
 async function tryGemini(task, input) {
   if (!process.env.GEMINI_API_KEY) return null;
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
-  const response = await postJson(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    { name: 'Gemini', headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY } },
-    {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ parts: [{ text: `${task}\n\nOCR/source text:\n${input}` }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 1800 },
-    },
-  );
-  const text = response?.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text || '')
-      .join('');
-  return { provider: 'Gemini', model, text: asJsonText(text) };
+  const options = {
+    name: 'Gemini',
+    headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY },
+  };
+  const source = `${task}\n\nOCR/source text:\n${input}`;
+  try {
+    const response = await postJson(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      options,
+      {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: source }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 1800 },
+      },
+    );
+    const text = response?.candidates?.[0]?.content?.parts
+        ?.map((part) => part.text || '')
+        .join('');
+    return { provider: 'Gemini', model, text: asJsonText(text) };
+  } catch (_) {
+    const response = await postJson(
+      'https://generativelanguage.googleapis.com/v1beta/interactions',
+      options,
+      {
+        model,
+        system_instruction: systemPrompt,
+        input: source,
+        generation_config: { temperature: 0.1, max_output_tokens: 1800 },
+      },
+    );
+    const text = response?.output_text ?? response?.outputText;
+    return { provider: 'Gemini', model, text: asJsonText(text) };
+  }
 }
 
 async function tryMistral(task, input) {
