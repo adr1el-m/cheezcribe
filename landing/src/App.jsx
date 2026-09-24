@@ -139,9 +139,9 @@ function Icon({ name }) {
   return <svg {...props}>{paths[name]}</svg>;
 }
 
-function PrimaryLink({ children = 'View on GitHub', className = 'button button-primary' }) {
+function PrimaryLink({ children = 'Try the app', className = 'button button-primary' }) {
   return (
-    <a className={className} href={REPO_URL} target="_blank" rel="noopener noreferrer">
+    <a className={className} href={APP_URL} target="_blank" rel="noopener noreferrer">
       {children}
       <Icon name="arrow" />
     </a>
