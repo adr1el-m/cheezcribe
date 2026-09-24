@@ -59,7 +59,7 @@ Future<CloudProxyAnswer> requestCloudVision({
       'mimeType': 'image/jpeg',
     }),
     requestHeaders: const {'Content-Type': 'application/json'},
-  ).timeout(const Duration(seconds: 42));
+  ).timeout(const Duration(seconds: 75));
   if (request.status != 200) {
     throw StateError('Cloud vision is unavailable. Try again with a brighter, closer photo.');
   }
