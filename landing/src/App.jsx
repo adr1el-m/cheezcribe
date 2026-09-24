@@ -187,7 +187,7 @@ function Header() {
           <a href="#features" onClick={() => setMenuOpen(false)}>Capabilities</a>
           <a href="#faq" onClick={() => setMenuOpen(false)}>FAQ</a>
         </div>
-        <PrimaryLink className="button button-primary nav-cta">Open repository</PrimaryLink>
+        <a className="button button-primary nav-cta" href={APP_URL} target="_blank" rel="noopener noreferrer">Try the app</a>
         <button
           aria-expanded={menuOpen}
           aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
