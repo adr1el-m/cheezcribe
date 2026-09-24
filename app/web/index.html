@@ -18,7 +18,8 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Paperazzi turns legacy documents into traceable, reviewable digital assets.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,16 +32,144 @@
 
   <title>Paperazzi</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+      color-scheme: light;
+      background: #f3f6f9;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 50% 35%, rgba(23, 105, 232, 0.1), transparent 34%),
+        linear-gradient(145deg, #f9fbfd, #e9eef4);
+    }
+
+    .device-stage {
+      display: grid;
+      width: 100%;
+      height: 100dvh;
+      place-items: center;
+    }
+
+    .device-shell,
+    #flutter-host,
+    flutter-view {
+      width: 100%;
+      height: 100%;
+    }
+
+    .device-shell {
+      position: relative;
+      background: #fff;
+    }
+
+    #flutter-host {
+      position: relative;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .dynamic-island,
+    .device-button {
+      display: none;
+    }
+
+    @media (min-width: 700px) {
+      .device-shell {
+        width: auto;
+        max-width: calc(100vw - 48px);
+        height: calc(100dvh - 40px);
+        padding: 9px;
+        border: 1px solid #555a60;
+        border-radius: 58px;
+        aspect-ratio: 430 / 900;
+        background:
+          linear-gradient(100deg, #0b0c0e 0%, #35383c 7%, #090a0b 15%, #17191b 85%, #55595d 94%, #0a0b0c 100%);
+        box-shadow:
+          0 32px 70px rgba(16, 27, 45, 0.24),
+          0 8px 22px rgba(16, 27, 45, 0.2),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+      }
+
+      #flutter-host {
+        border-radius: 49px;
+        box-sizing: border-box;
+        padding-top: 40px;
+      }
+
+      .dynamic-island {
+        position: absolute;
+        z-index: 20;
+        top: 20px;
+        left: 50%;
+        display: block;
+        width: 112px;
+        height: 32px;
+        border-radius: 999px;
+        background: #050506;
+        box-shadow: inset 0 -1px 1px rgba(255, 255, 255, 0.08);
+        pointer-events: none;
+        transform: translateX(-50%);
+      }
+
+      .device-button {
+        position: absolute;
+        z-index: -1;
+        display: block;
+        width: 5px;
+        border-radius: 3px 0 0 3px;
+        background: linear-gradient(to right, #111315, #555a60);
+      }
+
+      .device-button--mute {
+        top: 118px;
+        left: -5px;
+        height: 28px;
+      }
+
+      .device-button--volume-up {
+        top: 166px;
+        left: -5px;
+        height: 58px;
+      }
+
+      .device-button--volume-down {
+        top: 235px;
+        left: -5px;
+        height: 58px;
+      }
+
+      .device-button--power {
+        z-index: -1;
+        top: 184px;
+        right: -5px;
+        width: 5px;
+        height: 88px;
+        border-radius: 0 3px 3px 0;
+        background: linear-gradient(to left, #111315, #555a60);
+      }
+    }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
-
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
+  <main class="device-stage">
+    <div class="device-shell" aria-label="Paperazzi mobile application">
+      <span class="dynamic-island" aria-hidden="true"></span>
+      <span class="device-button device-button--mute" aria-hidden="true"></span>
+      <span class="device-button device-button--volume-up" aria-hidden="true"></span>
+      <span class="device-button device-button--volume-down" aria-hidden="true"></span>
+      <span class="device-button device-button--power" aria-hidden="true"></span>
+      <div id="flutter-host"></div>
+    </div>
+  </main>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
