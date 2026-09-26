@@ -91,11 +91,10 @@ extension _HomeView on _PaperazziHomeState {
               ),
               const SizedBox(height: 6),
               TextButton.icon(
-                onPressed: supportsImport && !busy
-                    ? () => import(sample: true)
-                    : null,
+                onPressed:
+                    supportsImport && !busy ? () => import(sample: true) : null,
                 icon: const Icon(Icons.bolt_outlined, size: 18),
-                label: const Text('Load Tagbilaran 1915 demo file'),
+                label: const Text('Load Tagbilaran waterworks sample'),
               ),
               if (kIsWeb)
                 const PzNotice(

@@ -15,6 +15,12 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/AppCon%202026-BEST%20IN%20PITCHING-7C3AED?style=for-the-badge" alt="AppCon 2026 Best in Pitching">
+  <img src="https://img.shields.io/badge/Final%20Ranking-3rd%20of%2011-F59E0B?style=for-the-badge" alt="Third overall out of 11 teams">
+  <img src="https://img.shields.io/badge/Prize-%E2%82%B110%2C000-10B981?style=for-the-badge" alt="Ten thousand peso prize">
+</p>
+
+<p align="center">
   <a href="https://paperazzi-appcon.vercel.app/app/"><img src="https://img.shields.io/badge/Live%20App-Try%20in%20Browser-0066FF?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Live Demo"></a>
   <a href="https://paperazzi-appcon.vercel.app"><img src="https://img.shields.io/badge/Landing%20Page-Explore%20Paperazzi-111827?style=for-the-badge&logo=vercel&logoColor=white" alt="Landing Page"></a>
   <a href="docs/PITCH_AND_JUDGING_CARD.md"><img src="https://img.shields.io/badge/Judges%20Card-Pitch%20%26%20Spec-10B981?style=for-the-badge&logo=readme&logoColor=white" alt="Pitch Card"></a>
@@ -40,6 +46,7 @@
 
 ## ⚡ Quick Navigation
 
+- [🏆 AppCon 2026 — Best in Pitching](#-appcon-2026--best-in-pitching)
 - [💡 The Problem: Digitized ≠ Understood](#-the-problem-digitized--understood)
 - [✨ What is Paperazzi?](#-what-is-paperazzi)
 - [🔄 The 4-Step Intelligent Pipeline](#-the-4-step-intelligent-pipeline)
@@ -52,6 +59,39 @@
 - [🏗️ Technical Architecture & Stack](#️-technical-architecture--stack)
 - [🚀 Quick Start & Installation](#-quick-start--installation)
 - [👥 Meet Team Cheezcribe](#-meet-team-cheezcribe)
+
+---
+
+## 🏆 AppCon 2026 — Best in Pitching
+
+Paperazzi, created by **Team Cheezcribe (Team 08)**, won **BEST IN PITCHING** at **AppCon 2026**. We also placed **third overall out of 11 teams** with a final score of **76** and took home the **₱10,000 special-award prize**.
+
+<p align="center">
+  <img src="readme_images/oW.png" width="95%" alt="AppCon 2026 official winners page showing Team Cheezcribe as Best in Pitching and third overall" style="border-radius: 10px;" />
+</p>
+
+<p align="center"><em>Official winners: Paperazzi received Best in Pitching alongside the announced grand winner.</em></p>
+
+<p align="center">
+  <img src="readme_images/finalranking.png" width="95%" alt="AppCon 2026 final rankings showing Team Cheezcribe and Paperazzi ranked third among 11 teams" style="border-radius: 10px;" />
+</p>
+
+<p align="center"><em>Final standings: Team Cheezcribe ranked #3 among all 11 competing teams.</em></p>
+
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://www.facebook.com/share/p/1MKrbLL5HP/"><img src="readme_images/FBpost.jpg" width="100%" alt="Official Facebook announcement naming Team Cheezcribe Best in Pitching and showing the ten-thousand-peso prize" /></a><br>
+      <b><a href="https://www.facebook.com/share/p/1MKrbLL5HP/">Official Best in Pitching announcement</a></b><br>
+      <em>AppCon 2026 Special Award • ₱10,000</em>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://www.facebook.com/share/p/1C6mkbHJbp/"><img src="readme_images/whilepitching.jpg" width="100%" alt="Team Cheezcribe presenting Paperazzi during the AppCon 2026 pitch" /></a><br>
+      <b><a href="https://www.facebook.com/share/p/1C6mkbHJbp/">Team Cheezcribe pitching Paperazzi</a></b><br>
+      <em>Our live AppCon 2026 presentation</em>
+    </td>
+  </tr>
+</table>
 
 ---
 

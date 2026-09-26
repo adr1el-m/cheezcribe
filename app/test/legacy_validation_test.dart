@@ -264,12 +264,11 @@ void main() {
     expect(
         kinds,
         containsAll([
-          'tank section',
-          'roof outer ring',
-          'radial roof support',
-          'supply pipe run',
-          'valve assembly',
-          'segmental section',
+          'tank section outline',
+          'roof plan outer ring',
+          'roof radial member',
+          'piping detail branch',
+          'segmental section arc',
         ]));
     expect(kinds, isNot(contains('quadrilateral')));
     expect(objects.every((object) => object.vertices.length >= 2), isTrue);

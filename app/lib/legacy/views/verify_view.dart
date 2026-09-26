@@ -43,7 +43,8 @@ extension _VerifyView on _PaperazziHomeState {
       const SizedBox(height: 22),
       Row(
         children: [
-          const PzLabel('Source crop', color: Pz.graphite),
+          PzLabel(field.sourceExcerpt != null ? 'Source page' : 'Source crop',
+              color: Pz.graphite),
           const Spacer(),
           PzSourceReference(parts: reference),
         ],
@@ -84,7 +85,9 @@ extension _VerifyView on _PaperazziHomeState {
               (line?.crop != null && line!.crop!.isNotEmpty) ||
                       (page != null && line != null && _canZoom(page, line))
                   ? 'Original scan region'
-                  : 'No line region · showing full page',
+                  : field.sourceExcerpt != null
+                      ? 'Prepared profile · excerpt manually checked against printed page 21'
+                      : 'No line region · showing full page',
               maxLines: 2,
               style: Pz.meta.copyWith(fontSize: 11.5, color: Pz.muted),
             ),
@@ -142,7 +145,11 @@ extension _VerifyView on _PaperazziHomeState {
                   _metaCell('Status', statusLabel, color: statusColor),
                   const VerticalDivider(width: 1),
                   _metaCell(
-                      'Review score', '${(field.score * 100).round()}/100'),
+                    field.sourceExcerpt != null ? 'Evidence' : 'Review score',
+                    field.sourceExcerpt != null
+                        ? 'Checked against p.21'
+                        : '${(field.score * 100).round()}/100',
+                  ),
                 ],
               ),
             ),
@@ -159,14 +166,19 @@ extension _VerifyView on _PaperazziHomeState {
             PzDataRow(
               label: lineIndex >= 0
                   ? 'Source · OCR line ${_PaperazziHomeState._pad(lineIndex + 1, 3)}'
-                  : 'Source · OCR',
-              value: field.ocrValue ?? 'No linked OCR text',
+                  : field.sourceExcerpt != null
+                      ? 'Source · page 21 excerpt'
+                      : 'Source · OCR',
+              value:
+                  field.sourceExcerpt ?? field.ocrValue ?? 'No linked OCR text',
             ),
             const Divider(),
             PzDataRow(
-              label: field.aiValue != null
-                  ? 'Suggestion · cloud (Gemini)'
-                  : 'Suggestion · on-device',
+              label: field.sourceExcerpt != null
+                  ? 'Prepared source checked value'
+                  : field.aiValue != null
+                      ? 'Suggestion · cloud (Gemini)'
+                      : 'Suggestion · on-device',
               value: suggestion ?? 'No supported interpretation',
             ),
             const Divider(),

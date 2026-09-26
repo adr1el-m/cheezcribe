@@ -72,6 +72,13 @@ extension _DrawingView on _PaperazziHomeState {
         },
       ).padded(),
       const SizedBox(height: 12),
+      if (objects.any((o) => o.traceMethod == 'manual_visual_trace'))
+        PzPanel(
+          child: Text(
+            'Prepared visual trace · approximate and unitless. The source page gives no CAD scale; do not use this outline for construction or survey work.',
+            style: Pz.meta.copyWith(color: Pz.graphite),
+          ),
+        ).padded(),
       _drawingCanvas(doc, page, objects, selected).padded(),
       if (drawingPages.length > 1) ...[
         const SizedBox(height: 10),
@@ -287,7 +294,10 @@ extension _DrawingView on _PaperazziHomeState {
                 ],
               ),
             ),
-            PzConfidence(o.confidence, threshold: .8),
+            PzConfidence(
+              o.traceMethod == 'manual_visual_trace' ? null : o.confidence,
+              threshold: .8,
+            ),
           ],
         ),
       ),

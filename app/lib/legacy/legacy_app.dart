@@ -195,7 +195,8 @@ class _PaperazziHomeState extends State<PaperazziHome> {
     try {
       WebCapturedDocument? captured;
       if (kIsWeb && !sample) {
-        captured = camera ? await captureWebDocument() : await pickWebDocument();
+        captured =
+            camera ? await captureWebDocument() : await pickWebDocument();
         if (captured == null) return;
       }
       final result = await pipeline.importAndProcess(
@@ -271,7 +272,8 @@ class _PaperazziHomeState extends State<PaperazziHome> {
     if (current == null || busy) return;
     HapticFeedback.lightImpact();
     if (kIsWeb) {
-      _toast('${format.toUpperCase()} preview is ready below. Copy it for the browser demo.');
+      _toast(
+          '${format.toUpperCase()} preview is ready below. Copy it for the browser demo.');
       return;
     }
     try {
@@ -576,6 +578,13 @@ class _PaperazziHomeState extends State<PaperazziHome> {
                         Text('Source OCR', style: Pz.meta),
                         const SizedBox(height: 3),
                         Text(field.ocrValue!, style: Pz.value),
+                      ],
+                      if (field.sourceExcerpt != null) ...[
+                        const SizedBox(height: 12),
+                        Text('Source excerpt · manually checked',
+                            style: Pz.meta),
+                        const SizedBox(height: 3),
+                        Text(field.sourceExcerpt!, style: Pz.value),
                       ],
                       const SizedBox(height: 16),
                       TextField(

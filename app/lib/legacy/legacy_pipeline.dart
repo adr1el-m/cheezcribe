@@ -33,31 +33,32 @@ class LegacyPipeline {
     onStage?.call(kIsWeb && capturedImage != null
         ? 'Reading the captured document with secure vision'
         : kIsWeb
-        ? 'Loading the interactive Tagbilaran document demo'
-        : camera
-        ? 'Scanning paper with camera'
-        : 'Importing pages and running on-device OCR');
+            ? 'Loading the interactive Tagbilaran document demo'
+            : camera
+                ? 'Scanning paper with camera'
+                : 'Importing pages and running on-device OCR');
     final Map<String, dynamic>? raw = kIsWeb
         ? capturedImage != null
             ? _webCapturedImagePacket(capturedImage, capturedName)
             : sample
                 ? await _webTagbilaranDemoPacket()
-                : throw StateError('Choose camera capture or image import in the browser.')
+                : throw StateError(
+                    'Choose camera capture or image import in the browser.')
         : savedPath != null
-        ? await _channel.invokeMapMethod<String, dynamic>(
-            'recognizeSaved', savedPath)
-        : sample
             ? await _channel.invokeMapMethod<String, dynamic>(
-                'recognizeSample',
-                (await rootBundle.load(
-                        'assets/demo/PRINT_ME_tagbilaran_blueprint_1915.pdf'))
-                    .buffer
-                    .asUint8List())
-            : camera
-                ? await _channel
-                    .invokeMapMethod<String, dynamic>('scanDocument')
-                : await _channel
-                    .invokeMapMethod<String, dynamic>('pickAndRecognize');
+                'recognizeSaved', savedPath)
+            : sample
+                ? await _channel.invokeMapMethod<String, dynamic>(
+                    'recognizeSample',
+                    (await rootBundle.load(
+                            'assets/demo/PRINT_ME_tagbilaran_blueprint_1915.pdf'))
+                        .buffer
+                        .asUint8List())
+                : camera
+                    ? await _channel
+                        .invokeMapMethod<String, dynamic>('scanDocument')
+                    : await _channel
+                        .invokeMapMethod<String, dynamic>('pickAndRecognize');
     if (raw == null) return null;
     final preparedPacket =
         raw['sourceFingerprint'] == _preparedPacketFingerprint;
@@ -107,6 +108,8 @@ class LegacyPipeline {
                       .map((value) => (value as num).toDouble())
                       .toList(),
                 ),
+                traceMethod:
+                    (rawObject['trace_method'] as String?) ?? 'detected',
               )
         ],
       ));
@@ -120,7 +123,7 @@ class LegacyPipeline {
         page.drawingObjects.clear();
       }
     } else if (preparedBlueprint) {
-      // This public 1915 sheet mixes a drawing plate with two-column report
+      // This public sheet mixes a drawing plate with two-column report
       // text. Generic rectangle detection mistakes columns, page borders, and
       // tables for CAD geometry. Replace those proposals with a reviewed,
       // document-specific semantic trace of the actual engineering figures.
@@ -141,6 +144,35 @@ class LegacyPipeline {
     final detectedTypes = <String>{};
     for (final page in pages) {
       var interpreted = false;
+      if (preparedBlueprint) {
+        final analysis = _extractPreparedTagbilaranPage(page);
+        documentType = analysis.type;
+        detectedTypes.add(analysis.type);
+        for (final suggestion in analysis.fields) {
+          final line = suggestion.lineIndex >= 0 &&
+                  suggestion.lineIndex < page.lines.length
+              ? page.lines[suggestion.lineIndex]
+              : null;
+          fields.add(LegacyField(
+            id: 'p${page.number}f${fields.length}',
+            name: suggestion.name,
+            page: page.number,
+            lineIndex: line == null ? -1 : suggestion.lineIndex,
+            ocrValue: line?.text,
+            sourceExcerpt: suggestion.sourceExcerpt,
+            aiValue: null,
+            score: 1,
+            reason:
+                'Manually checked against printed page 21 for this exact source file. This is a prepared reference profile, not a live AI result.',
+            status: FieldStatus.accepted,
+            recordIndex: suggestion.recordIndex,
+            suggestedValue: suggestion.value,
+            finalValue: suggestion.value,
+          ));
+        }
+        interpretedPages++;
+        continue;
+      }
       if (connection.ready && useAi && !preparedPacket && !preparedBlueprint) {
         try {
           // Keep large imports responsive while still applying multimodal AI
@@ -260,8 +292,8 @@ class LegacyPipeline {
     }
     final note = preparedBlueprint
         ? kIsWeb
-            ? 'Loaded the interactive browser demo for the 1915 Tagbilaran waterworks sheet, including its prepared review and drawing trace.'
-            : 'Recognized the 1915 Tagbilaran waterworks sheet on-device and loaded a semantic engineering trace linked to the visible plate.'
+            ? 'Loaded the source-checked Tagbilaran demo profile. Browser OCR was not run; each displayed value has a manually checked source excerpt. Drawing lines are approximate and unscaled.'
+            : 'Matched the exact Tagbilaran source file and loaded its manually checked page 21 profile. Native OCR remains visible separately; drawing lines are approximate and unscaled.'
         : cloudAiPages > 0
             ? 'Gemini interpreted $cloudAiPages of ${pages.length} pages; remaining pages used on-device OCR and conservative structuring.'
             : 'Extracted $interpretedPages pages with on-device ${defaultTargetPlatform == TargetPlatform.android ? 'ML Kit' : 'Apple Vision'} OCR and deterministic structuring.';
@@ -282,43 +314,10 @@ class LegacyPipeline {
   /// ML Kit, so they use a clearly scoped prepared analysis rather than
   /// claiming that native OCR happened in the browser.
   Future<Map<String, dynamic>> _webTagbilaranDemoPacket() async {
-    final image = (await rootBundle.load(
-            'assets/demo/tagbilaran_blueprint_web.jpg'))
-        .buffer
-        .asUint8List();
-    const anchors = <String>[
-      'QUARTERLY BULLETIN, BUREAU OF PUBLIC WORKS',
-      'PLAN OF CONCRETE TANKS FOR TAGBILARAN WATER WORKS',
-      'TAGBILARAN, BOHOL, P.I.',
-      'Roof Plan',
-      'Section on Diameter',
-      'Segmental Section',
-      '860 meters',
-      'Lift is from 12.50 to 16.50 meters.',
-      '3 inches in diameter.',
-      'Fairbanks-Morse kerosene pumping engine, 8 horsepower.',
-      '4-inch intake and 3-inch discharge.',
-      'Total cost of the installation of pipes and tank was P12,195.07.',
-      'There are 9 public and 65 private hydrants.',
-      'Water is satisfactory for drinking.',
-      'CHEMICAL ANALYSIS (December 28, 1910).',
-    ];
-    final lines = <Map<String, dynamic>>[
-      for (var i = 0; i < 98; i++)
-        {
-          'text': i < anchors.length
-              ? anchors[i]
-              : 'Preserved engineering record reference ${i + 1}',
-          'confidence': i < anchors.length ? .96 : .92,
-          'box': [
-            i.isEven ? .06 : .52,
-            .02 + ((i % 49) * .018),
-            i.isEven ? .38 : .40,
-            .012,
-          ],
-          'crop': null,
-        },
-    ];
+    final image =
+        (await rootBundle.load('assets/demo/tagbilaran_blueprint_web.jpg'))
+            .buffer
+            .asUint8List();
     return {
       'name': 'PRINT_ME_tagbilaran_blueprint_1915.pdf',
       'sourceFingerprint': _tagbilaranBlueprintFingerprint,
@@ -327,12 +326,14 @@ class LegacyPipeline {
         {
           'number': 1,
           'image': image,
-          'enhancedImage': image,
-          'enhancementApplied': true,
-          'originalMeanConfidence': .946,
-          'pixelWidth': 1200,
-          'pixelHeight': 1600,
-          'lines': lines,
+          'enhancedImage': null,
+          'enhancementApplied': false,
+          'originalMeanConfidence': null,
+          'pixelWidth': 1595,
+          'pixelHeight': 1985,
+          // No OCR engine runs in the browser demo. Values and excerpts are
+          // supplied by the prepared, manually checked profile below.
+          'lines': const <Map<String, dynamic>>[],
           'drawingObjects': const <Map<String, dynamic>>[],
         }
       ],
@@ -342,7 +343,8 @@ class LegacyPipeline {
   Map<String, dynamic> _webCapturedImagePacket(Uint8List image, String? name) {
     return {
       'name': name?.trim().isNotEmpty == true ? name : 'Captured document.jpg',
-      'sourceFingerprint': 'web-camera-${DateTime.now().microsecondsSinceEpoch}',
+      'sourceFingerprint':
+          'web-camera-${DateTime.now().microsecondsSinceEpoch}',
       'historyPath': null,
       'pages': [
         {
@@ -757,8 +759,13 @@ class LegacyPipeline {
 
 @visibleForTesting
 List<DrawingObject> preparedTagbilaranDrawingProfile() {
-  List<double> circle(double cx, double cy, double rx, double ry,
-          {int segments = 40}) =>
+  List<double> ellipse(
+    double cx,
+    double cy,
+    double rx,
+    double ry, {
+    int segments = 48,
+  }) =>
       [
         for (var i = 0; i < segments; i++) ...[
           cx + math.cos((math.pi * 2 * i) / segments) * rx,
@@ -766,159 +773,159 @@ List<DrawingObject> preparedTagbilaranDrawingProfile() {
         ],
       ];
 
-  DrawingObject object(
+  List<double> arc(double cx, double cy, double rx, double ry) => [
+        for (var i = 0; i <= 24; i++) ...[
+          cx + math.cos(math.pi + math.pi * i / 24) * rx,
+          cy + math.sin(math.pi + math.pi * i / 24) * ry,
+        ],
+      ];
+
+  DrawingObject trace(
     String id,
     String kind,
     List<double> box,
     List<double> points, {
-    bool closed = true,
-    double confidence = .94,
+    bool closed = false,
     List<String> labels = const [],
   }) =>
       DrawingObject(
         id: id,
         kind: kind,
         box: box,
+        confidence: 0,
         points: points,
         closed: closed,
-        confidence: confidence,
         sourceLabels: labels,
+        traceMethod: 'manual_visual_trace',
       );
 
+  const cx = .543;
+  const cy = .177;
   return [
-    object(
-      'tagbilaran-tank-section',
-      'tank section',
-      const [.055, .085, .305, .175],
+    trace(
+      'tagbilaran-diameter-section',
+      'tank section outline',
+      const [.055, .085, .315, .15],
       const [
-        .055,
-        .245,
-        .085,
-        .245,
-        .085,
-        .132,
+        .058,
+        .129,
         .205,
-        .095,
-        .325,
-        .132,
-        .325,
-        .245,
+        .094,
         .360,
-        .245
+        .129,
+        .360,
+        .228,
+        .058,
+        .228,
+        .058,
+        .129,
       ],
-      closed: false,
-      confidence: .97,
       labels: const ['Section on Diameter'],
     ),
-    object(
-      'tagbilaran-foundation-slab',
-      'foundation slab',
-      const [.082, .238, .248, .018],
-      const [.082, .238, .330, .238, .330, .256, .082, .256],
-      confidence: .95,
-      labels: const ['Concrete tank base'],
+    trace(
+      'tagbilaran-section-center-support',
+      'central support line',
+      const [.198, .094, .014, .134],
+      const [.205, .094, .205, .228],
     ),
-    object(
-      'tagbilaran-central-riser',
-      'central riser',
-      const [.198, .105, .015, .140],
-      const [.205, .105, .205, .245],
-      closed: false,
-      confidence: .94,
-      labels: const ['Center support'],
+    trace(
+      'tagbilaran-section-base',
+      'tank base outline',
+      const [.078, .223, .282, .012],
+      const [.078, .223, .360, .223, .360, .235, .078, .235],
+      closed: true,
     ),
-    object(
-      'tagbilaran-roof-outer-ring',
-      'roof outer ring',
-      const [.397, .058, .292, .238],
-      circle(.543, .177, .146, .119),
-      confidence: .98,
-      labels: const ['Roof Plan'],
-    ),
-    object(
-      'tagbilaran-roof-inner-ring',
-      'roof inner ring',
-      const [.427, .083, .232, .188],
-      circle(.543, .177, .116, .094),
-      confidence: .96,
-    ),
-    object(
-      'tagbilaran-roof-hub',
-      'roof center hub',
-      const [.515, .151, .056, .052],
-      circle(.543, .177, .028, .026, segments: 24),
-      confidence: .95,
-    ),
-    for (var i = 0; i < 8; i++)
-      object(
-        'tagbilaran-radial-${i + 1}',
-        'radial roof support',
-        const [.397, .058, .292, .238],
-        [
-          .543 + math.cos((math.pi * 2 * i) / 8) * .028,
-          .177 + math.sin((math.pi * 2 * i) / 8) * .026,
-          .543 + math.cos((math.pi * 2 * i) / 8) * .143,
-          .177 + math.sin((math.pi * 2 * i) / 8) * .116,
-        ],
-        closed: false,
-        confidence: .93,
+    for (final (index, rx, ry) in <(int, double, double)>[
+      (1, .145, .118),
+      (2, .132, .107),
+      (3, .121, .098),
+      (4, .110, .089),
+    ])
+      trace(
+        'tagbilaran-roof-ring-$index',
+        index == 1 ? 'roof plan outer ring' : 'roof plan ring',
+        [cx - rx, cy - ry, rx * 2, ry * 2],
+        ellipse(cx, cy, rx, ry),
+        closed: true,
+        labels: index == 1 ? const ['Roof Plan'] : const [],
       ),
-    object(
-      'tagbilaran-supply-line',
-      'supply pipe run',
-      const [.682, .078, .258, .112],
-      const [
-        .682,
-        .091,
-        .748,
-        .091,
-        .748,
-        .105,
-        .810,
-        .105,
-        .810,
-        .090,
-        .905,
-        .090,
-        .905,
-        .108,
-        .940,
-        .108
-      ],
-      closed: false,
-      confidence: .95,
-      labels: const ['Supply & Waste Pipe'],
-    ),
-    object(
-      'tagbilaran-discharge-line',
-      'waste pipe run',
-      const [.810, .138, .105, .100],
-      const [.810, .138, .810, .170, .846, .170, .846, .205, .915, .205],
-      closed: false,
-      confidence: .94,
-      labels: const ['Waste line'],
-    ),
-    object(
-      'tagbilaran-valve',
-      'valve assembly',
-      const [.829, .158, .032, .026],
-      circle(.845, .171, .016, .013, segments: 20),
-      confidence: .91,
-      labels: const ['Valve'],
-    ),
-    object(
-      'tagbilaran-segmental-section',
-      'segmental section',
-      const [.105, .307, .207, .060],
-      [
-        for (var i = 0; i <= 24; i++) ...[
-          .208 + math.cos(math.pi + (math.pi * i / 24)) * .103,
-          .367 + math.sin(math.pi + (math.pi * i / 24)) * .060,
+    for (var i = 0; i < 12; i++)
+      trace(
+        'tagbilaran-roof-radial-${i + 1}',
+        'roof radial member',
+        const [.398, .059, .290, .236],
+        [
+          cx + math.cos((math.pi * 2 * i) / 12) * .018,
+          cy + math.sin((math.pi * 2 * i) / 12) * .015,
+          cx + math.cos((math.pi * 2 * i) / 12) * .145,
+          cy + math.sin((math.pi * 2 * i) / 12) * .118,
         ],
+      ),
+    trace(
+      'tagbilaran-roof-east-west-axis',
+      'roof plan cross member',
+      const [.398, .177, .290, .001],
+      const [.398, .177, .688, .177],
+    ),
+    trace(
+      'tagbilaran-roof-north-south-axis',
+      'roof plan cross member',
+      const [.543, .059, .001, .236],
+      const [.543, .059, .543, .295],
+    ),
+    trace(
+      'tagbilaran-piping-detail-main',
+      'piping detail outline',
+      const [.704, .074, .274, .140],
+      const [
+        .704,
+        .074,
+        .960,
+        .074,
+        .960,
+        .081,
+        .978,
+        .081,
+        .978,
+        .093,
+        .952,
+        .093,
+        .952,
+        .087,
+        .704,
+        .087,
       ],
-      closed: false,
-      confidence: .92,
-      labels: const ['Segmental Section'],
+      labels: const ['Piping detail'],
+    ),
+    trace(
+      'tagbilaran-piping-detail-branch-a',
+      'piping detail branch',
+      const [.804, .080, .035, .085],
+      const [.812, .080, .812, .113, .839, .113, .839, .165],
+    ),
+    trace(
+      'tagbilaran-piping-detail-branch-b',
+      'piping detail branch',
+      const [.895, .080, .040, .108],
+      const [.904, .080, .904, .128, .936, .128, .936, .188],
+    ),
+    for (final (index, rx, ry) in <(int, double, double)>[
+      (1, .103, .060),
+      (2, .096, .055),
+      (3, .089, .050),
+    ])
+      trace(
+        'tagbilaran-segmental-arc-$index',
+        'segmental section arc',
+        [.208 - rx, .367 - ry, rx * 2, ry],
+        arc(.208, .367, rx, ry),
+        labels: index == 1 ? const ['Segmental Section'] : const [],
+      ),
+    trace(
+      'tagbilaran-segmental-center-line',
+      'segmental section center line',
+      const [.208, .307, .001, .060],
+      const [.208, .367, .208, .307],
     ),
   ];
 }
@@ -945,96 +952,105 @@ _PageAnalysis _extractPreparedTagbilaranPage(LegacyPage page) {
     return best;
   }
 
-  return _PageAnalysis('1915 Tagbilaran Waterworks Engineering Record', [
+  return _PageAnalysis('Tagbilaran Water Works concrete tank plan', [
     _FieldSuggestion(
       'project_title',
-      'Plan of Concrete Tanks for Tagbilaran Water Works',
-      sourceFor(['PLAN OF CONCRETE', 'TAGBILARAN WATER'], .25),
+      'Plan of Concrete Tank for Tagbilaran Water Works',
+      sourceFor(['PLAN OF CONCRETE TANK'], .28),
       0,
+      sourceExcerpt: 'PLAN OF CONCRETE TANK FOR TAGBILARAN WATER WORKS',
     ),
     _FieldSuggestion(
       'issuing_agency',
       'Bureau of Public Works',
       sourceFor(['BUREAU OF PUBLIC WORKS'], .02),
       0,
+      sourceExcerpt: 'QUARTERLY BULLETIN, BUREAU OF PUBLIC WORKS.',
     ),
     _FieldSuggestion(
       'project_location',
-      'Tagbilaran, Bohol',
-      sourceFor(['TAGBILARAN', 'BOHOL'], .28),
+      'Tagbilaran, Bohol, P.I.',
+      sourceFor(['TAGBILARAN, BOHOL', 'BOHOL, P.I.'], .28),
       0,
+      sourceExcerpt: 'TAGBILARAN, BOHOL, P.I.',
     ),
     _FieldSuggestion(
       'drawing_views',
-      'Roof plan, section on diameter, segmental section, and supply/waste piping detail',
-      sourceFor(['ROOF PLAN', 'SECTION ON DIAMETER'], .25),
+      'Section on Diameter; Roof Plan; piping detail; Segmental Section',
+      sourceFor(['SECTION ON DIAMETER', 'ROOF PLAN'], .25),
       0,
+      sourceExcerpt: 'Section on Diameter; Roof Plan; Segmental Section',
     ),
     _FieldSuggestion(
       'pipeline_distance',
       '860 meters',
-      sourceFor(['860 METERS', '860'], .70),
+      sourceFor(['DISTANCE FROM WELL TO TANK', '860 METERS'], .70),
       1,
+      sourceExcerpt: 'Distance from well to tank is 860 meters.',
     ),
     _FieldSuggestion(
       'lift_range',
       '12.50 to 16.50 meters',
-      sourceFor(['12.50', '16.50'], .72),
+      sourceFor(['LIFT IS FROM', '12.50', '16.50'], .72),
       1,
+      sourceExcerpt: 'Lift is from 12.50 to 16.50 meters.',
     ),
     _FieldSuggestion(
       'main_line_diameter',
       '3 inches',
-      sourceFor(['3 INCHES', '3-INCH'], .69),
+      sourceFor(['MAIN LINE FROM WELL TO TANK', 'MAIN LINE'], .69),
       1,
+      sourceExcerpt: 'The main line from well to tank is 3 inches in diameter.',
     ),
     _FieldSuggestion(
       'branch_line_diameter',
       '1 1/2 inches',
       sourceFor(['BRANCH LINES', '1½', '1 1/2'], .69),
       1,
+      sourceExcerpt: 'Branch lines are 1 1/2 inches in diameter.',
+    ),
+    _FieldSuggestion(
+      'tank_intake_position',
+      'At the bottom of the tank',
+      sourceFor(['INTAKE BEING IN THE BOTTOM', 'BOTTOM OF THE TANK'], .72),
+      1,
+      sourceExcerpt: 'The intake is at the bottom of the tank.',
     ),
     _FieldSuggestion(
       'pumping_engine',
-      'Fairbanks-Morse kerosene pumping engine, 8 horsepower',
-      sourceFor(['FAIRBANKS', '8 HORSEPOWER'], .76),
+      'Fairbanks-Morse kerosene engine, 8 horsepower',
+      sourceFor(['FAIRBANKS-MORSE', '8 HORSEPOWER'], .77),
       2,
+      sourceExcerpt: 'A Fairbanks-Morse kerosene pumping engine, 8 horsepower.',
     ),
     _FieldSuggestion(
-      'engine_connections',
-      '4-inch intake and 3-inch discharge',
-      sourceFor(['4-INCH INTAKE', '3-INCH DISCHARGE'], .77),
+      'engine_intake_diameter',
+      '4 inches',
+      sourceFor(['4-INCH INTAKE'], .77),
       2,
+      sourceExcerpt: 'The engine has a 4-inch intake.',
+    ),
+    _FieldSuggestion(
+      'engine_discharge_diameter',
+      '3 inches',
+      sourceFor(['3-INCH DISCHARGE'], .77),
+      2,
+      sourceExcerpt: 'The engine has a 3-inch discharge.',
     ),
     _FieldSuggestion(
       'installation_cost',
-      '₱12,195.07',
+      'P12,195.07 for pipes and tank; pumping plant excluded',
       sourceFor(['12,195.07', '12,195'], .88),
       3,
+      sourceExcerpt:
+          'The cost for pipes and tank was P12,195.07, excluding the pumping plants.',
     ),
     _FieldSuggestion(
       'hydrant_network',
-      '9 public and 65 private hydrants',
+      '9 public; 65 private hydrants',
       sourceFor(['9 PUBLIC', '65 PRIVATE'], .90),
       3,
-    ),
-    _FieldSuggestion(
-      'chemical_analysis_date',
-      'December 28, 1910',
-      sourceFor(['DECEMBER 28, 1910'], .40),
-      4,
-    ),
-    _FieldSuggestion(
-      'biological_examination_date',
-      'March 25, 1914',
-      sourceFor(['MARCH 25, 1914'], .40),
-      4,
-    ),
-    _FieldSuggestion(
-      'water_quality_conclusion',
-      'Water is satisfactory for drinking',
-      sourceFor(['SATISFACTORY FOR DRINKING'], .94),
-      4,
+      sourceExcerpt: 'There are 9 public and 65 private hydrants.',
     ),
   ]);
 }
@@ -1344,9 +1360,11 @@ class _PageAnalysis {
 
 class _FieldSuggestion {
   const _FieldSuggestion(
-      this.name, this.value, this.lineIndex, this.recordIndex);
+      this.name, this.value, this.lineIndex, this.recordIndex,
+      {this.sourceExcerpt});
   final String name;
   final String? value;
   final int lineIndex;
   final int recordIndex;
+  final String? sourceExcerpt;
 }

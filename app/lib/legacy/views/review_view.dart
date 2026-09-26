@@ -110,7 +110,10 @@ extension _ReviewShell on _PaperazziHomeState {
       PzDataGrid([
         PzMetric('OCR lines', _fmtInt(doc.totalOcrLines)),
         PzMetric(
-            'Mean OCR', '${(doc.meanOcrConfidence * 100).toStringAsFixed(1)}%'),
+            'Mean OCR',
+            doc.totalOcrLines == 0
+                ? '—'
+                : '${(doc.meanOcrConfidence * 100).toStringAsFixed(1)}%'),
         PzMetric('Low conf.', _fmtInt(doc.lowConfidenceLines),
             color: doc.lowConfidenceLines > 0 ? Pz.review : null),
         PzMetric(

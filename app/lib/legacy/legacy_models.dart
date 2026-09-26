@@ -55,6 +55,7 @@ class DrawingObject {
     this.points = const [],
     this.closed = true,
     this.sourceLabels = const [],
+    this.traceMethod = 'detected',
   });
 
   final String id;
@@ -64,6 +65,7 @@ class DrawingObject {
   final List<double> points;
   final bool closed;
   final List<String> sourceLabels;
+  final String traceMethod;
 
   List<List<double>> get vertices {
     if (points.length >= 6 && points.length.isEven) {
@@ -84,7 +86,7 @@ class DrawingObject {
     ];
   }
 
-  Map<String, Object> toJson() => {
+  Map<String, Object?> toJson() => {
         'id': id,
         'kind': kind,
         'box': box.map((v) => double.parse(v.toStringAsFixed(5))).toList(),
@@ -94,6 +96,8 @@ class DrawingObject {
         'source_labels': sourceLabels,
         'units': 'normalized_page',
         'review_required': true,
+        'trace_method': traceMethod,
+        if (traceMethod == 'manual_visual_trace') 'confidence': null,
       };
 }
 
@@ -113,6 +117,7 @@ class LegacyField {
     this.recordIndex = 0,
     this.suggestedValue,
     this.finalValue,
+    this.sourceExcerpt,
   });
   final String id;
   final String name;
@@ -131,6 +136,10 @@ class LegacyField {
   final int recordIndex;
   final String? finalValue;
 
+  /// Human-transcribed quotation used when an exact known source has a
+  /// prepared, source-checked profile (for example, the browser demo).
+  final String? sourceExcerpt;
+
   bool get needsReview => status == FieldStatus.review;
   bool get resolved => status != FieldStatus.review;
 
@@ -147,6 +156,7 @@ class LegacyField {
         recordIndex: recordIndex,
         suggestedValue: suggestedValue,
         finalValue: decision == FieldStatus.unreadable ? null : value,
+        sourceExcerpt: sourceExcerpt,
       );
 
   Map<String, Object?> toJson() => {
@@ -159,8 +169,11 @@ class LegacyField {
         'ocr_value': ocrValue,
         'on_device_suggestion': suggestedValue,
         'ai_suggestion': aiValue,
-        'review_score': double.parse(score.toStringAsFixed(2)),
+        if (sourceExcerpt == null)
+          'review_score': double.parse(score.toStringAsFixed(2)),
         'review_reason': reason,
+        'source_excerpt': sourceExcerpt,
+        if (sourceExcerpt != null) 'evidence_type': 'manual_source_excerpt',
       };
 }
 
@@ -223,12 +236,16 @@ class LegacyDocument {
 
   double get sourceLinkedRate => fields.isEmpty
       ? 0
-      : fields.where((f) => f.lineIndex >= 0).length / fields.length;
+      : fields
+              .where((f) => f.lineIndex >= 0 || f.sourceExcerpt != null)
+              .length /
+          fields.length;
 
-  Map<String, Object> get qualityReport => {
+  Map<String, Object?> get qualityReport => {
         'ocr_lines': totalOcrLines,
-        'mean_ocr_confidence':
-            double.parse(meanOcrConfidence.toStringAsFixed(3)),
+        'mean_ocr_confidence': totalOcrLines == 0
+            ? null
+            : double.parse(meanOcrConfidence.toStringAsFixed(3)),
         'low_confidence_lines': lowConfidenceLines,
         'source_linked_rate': double.parse(sourceLinkedRate.toStringAsFixed(3)),
         'fields_requiring_review': needsReview,
@@ -237,8 +254,9 @@ class LegacyDocument {
         'drawing_objects': drawingObjectCount,
         'drawing_source_labels': drawingLabelCount,
         'cad_calibrated': cadIsCalibrated,
-        'claim_boundary':
-            'Quality indicators route review; they are not an accuracy percentage.',
+        'claim_boundary': totalOcrLines == 0
+            ? 'No browser OCR was run for this prepared profile. Its source excerpts were manually transcribed and checked against the supplied page; the visual drawing trace is approximate and unscaled.'
+            : 'Quality indicators route review; they are not an accuracy percentage.',
       };
 
   void decide(String id, FieldStatus decision, String? value) {
@@ -284,7 +302,7 @@ class LegacyDocument {
       ..writeln(
           '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pageWidth.toStringAsFixed(5)} ${pageHeight.toStringAsFixed(5)}" data-units="${_xml(cadIsCalibrated ? cadUnit : 'normalized')}">')
       ..writeln(
-          '<!-- AI-assisted vector trace. Geometry, labels, and scale require human review. -->');
+          '<!-- Geometry is approximate. Manual visual traces are unitless and not for construction. -->');
     for (final page in pages) {
       final currentAspect =
           page.pixelWidth > 0 ? page.pixelHeight / page.pixelWidth : 1.0;
@@ -299,7 +317,7 @@ class LegacyDocument {
                 '${(point[0] * pageWidth).toStringAsFixed(5)},${(point[1] * currentHeight).toStringAsFixed(5)}')
             .join(' ');
         buffer.writeln(
-            '<${object.closed ? 'polygon' : 'polyline'} id="${object.id}" points="$points" data-kind="${object.kind}" data-confidence="${object.confidence.toStringAsFixed(3)}" data-review-required="true"/>');
+            '<${object.closed ? 'polygon' : 'polyline'} id="${object.id}" points="$points" data-kind="${object.kind}" data-trace-method="${_xml(object.traceMethod)}"${object.traceMethod == 'manual_visual_trace' ? '' : ' data-confidence="${object.confidence.toStringAsFixed(3)}"'} data-review-required="true"/>');
         if (object.sourceLabels.isNotEmpty) {
           final x = object.box[0] * pageWidth;
           final y = object.box[1] * currentHeight;
@@ -318,7 +336,7 @@ class LegacyDocument {
       ..writeln('0\nSECTION\n2\nHEADER')
       ..writeln('9\n\$INSUNITS\n70\n${_dxfUnitCode(cadUnit)}')
       ..writeln(
-          '999\nAI-assisted trace; all geometry and labels require review.')
+          '999\nManual visual trace; geometry is approximate, unitless, and not for construction.')
       ..writeln('0\nENDSEC')
       ..writeln('0\nSECTION\n2\nENTITIES');
     for (final page in pages) {
@@ -373,6 +391,8 @@ class LegacyDocument {
       'page',
       'source_line',
       'ocr_value',
+      'source_excerpt',
+      'evidence_type',
       'ai_suggestion',
       'review_score',
       'review_reason'
@@ -417,9 +437,11 @@ class LegacyDocument {
 
   String generateExecutiveAbstract() {
     final pageCount = pages.length;
+    final sourceSummary = totalOcrLines == 0
+        ? 'No browser OCR was run; the prepared fields were manually checked against the source page.'
+        : 'Paperazzi preserved the source and extracted $totalOcrLines OCR lines.';
     return 'This $documentType contains $pageCount scanned page${pageCount == 1 ? '' : 's'}. '
-        'Paperazzi preserved the source, extracted $totalOcrLines OCR lines, and prepared '
-        '${fields.length} reviewable structured fields with source references. '
+        '$sourceSummary Prepared ${fields.length} structured fields with source references. '
         '$needsReview unresolved value${needsReview == 1 ? '' : 's'} remain explicitly marked for human review.';
   }
 
@@ -458,8 +480,9 @@ class LegacyDocument {
       'fieldCount': fields.length,
       'needsReview': needsReview,
       'resolved': resolved,
-      'qualityScore':
-          '${(avgConfidence * 100).toStringAsFixed(1)}% mean OCR confidence',
+      'qualityScore': totalLines == 0
+          ? 'Not measured'
+          : '${(avgConfidence * 100).toStringAsFixed(1)}% mean OCR confidence',
       'keyEntities': keyEntities,
       'stats': {
         'totalLines': totalLines,

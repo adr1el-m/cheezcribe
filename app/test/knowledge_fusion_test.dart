@@ -360,6 +360,7 @@ void main() {
   });
 
   final key = Platform.environment['OPENROUTER_API_KEY'] ?? '';
+  final runLiveAiTests = Platform.environment['RUN_LIVE_AI_TESTS'] == 'true';
   test('live OpenRouter Knowledge Fusion', () async {
     final outcome = await KnowledgeFusionPipeline(
       store: MemoryKnowledgeStore()..save(pumpBlueprint()),
@@ -384,6 +385,8 @@ void main() {
       expect(Uri.parse(w.url).isAbsolute, isTrue);
     }
   },
-      skip: key.isEmpty ? 'Set OPENROUTER_API_KEY to run' : false,
+      skip: key.isEmpty || !runLiveAiTests
+          ? 'Set OPENROUTER_API_KEY and RUN_LIVE_AI_TESTS=true to run'
+          : false,
       timeout: const Timeout(Duration(minutes: 3)));
 }

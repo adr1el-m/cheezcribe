@@ -60,7 +60,13 @@ void main() {
     expect(page.drawingObjects.every((object) => object.vertices.length >= 3),
         isTrue);
     expect(
-        page.drawingObjects.any((object) => object.kind == 'contour'), isTrue);
+        page.drawingObjects
+            .any((object) => object.kind == 'tank section outline'),
+        isTrue);
+    expect(
+        page.drawingObjects
+            .any((object) => object.kind == 'roof plan outer ring'),
+        isTrue);
     expect(result.document.fields, isNotEmpty);
   });
 }

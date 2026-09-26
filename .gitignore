@@ -20,3 +20,6 @@ firebase-debug.log*
 **/ios/Pods/
 **/lib/firebase_options.dart
 **/firebase.json
+.vercel
+.env.local
+.env.*.local

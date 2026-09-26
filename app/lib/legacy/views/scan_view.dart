@@ -221,7 +221,9 @@ extension _ScanView on _PaperazziHomeState {
             label: 'Text',
             state: state(1),
             value: r != null
-                ? '${_fmtInt(r.totalOcrLines)} lines · ${(r.meanOcrConfidence * 100).toStringAsFixed(1)}% mean'
+                ? r.totalOcrLines == 0
+                    ? 'Prepared source profile · OCR not run'
+                    : '${_fmtInt(r.totalOcrLines)} lines · ${(r.meanOcrConfidence * 100).toStringAsFixed(1)}% mean'
                 : 'Recognition · $ocrEngineName',
           ),
           PzScannerStatusRow(
